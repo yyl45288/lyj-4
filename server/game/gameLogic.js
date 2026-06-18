@@ -1,9 +1,4 @@
-const { goods } = require('../data/goods');
-const { cities, connections } = require('../data/cities');
-const { events } = require('../data/events');
-
-function calculateCityPrices(cityId, cityInventory) {
-  const city = cities.find(c => c.id === cityId);
+function calculateCityPrices(cityId, cityInventory, city, goods) {
   if (!city) return {};
 
   const prices = {};
@@ -28,7 +23,7 @@ function calculateCityPrices(cityId, cityInventory) {
   return prices;
 }
 
-function calculateTravelCost(fromCityId, toCityId) {
+function calculateTravelCost(fromCityId, toCityId, connections) {
   const connection = connections.find(
     c => (c.from === fromCityId && c.to === toCityId) || (c.from === toCityId && c.to === fromCityId)
   );
@@ -53,7 +48,7 @@ function calculateTravelCost(fromCityId, toCityId) {
   };
 }
 
-function getConnectedCities(cityId) {
+function getConnectedCities(cityId, cities, connections) {
   const connectedIds = new Set();
   connections.forEach(conn => {
     if (conn.from === cityId) connectedIds.add(conn.to);
@@ -61,7 +56,7 @@ function getConnectedCities(cityId) {
   });
 
   return cities.filter(c => connectedIds.has(c.id)).map(city => {
-    const travel = calculateTravelCost(cityId, city.id);
+    const travel = calculateTravelCost(cityId, city.id, connections);
     return {
       ...city,
       travel
@@ -69,7 +64,7 @@ function getConnectedCities(cityId) {
   });
 }
 
-function calculateCaravanWeight(inventory) {
+function calculateCaravanWeight(inventory, goods) {
   let weight = 0;
   Object.entries(inventory).forEach(([goodId, amount]) => {
     const good = goods.find(g => g.id === goodId);
@@ -80,7 +75,7 @@ function calculateCaravanWeight(inventory) {
   return Math.round(weight * 10) / 10;
 }
 
-function rollRandomEvent(dangerLevel) {
+function rollRandomEvent(dangerLevel, events) {
   const eventChance = 0.3 + dangerLevel * 0.4;
   if (Math.random() > eventChance) {
     return null;
@@ -110,7 +105,7 @@ function rollRandomEvent(dangerLevel) {
   return availableEvents[0];
 }
 
-function applyEventEffect(event, caravan) {
+function applyEventEffect(event, caravan, goods) {
   const result = {
     event: event,
     messages: [],
@@ -225,7 +220,7 @@ function updateCityInventoryAfterTrade(cityId, cityInventory, goodId, amount, is
   return newInventory;
 }
 
-function simulateMarketFluctuation(cityInventories) {
+function simulateMarketFluctuation(cityInventories, goods) {
   const newInventories = {};
   Object.keys(cityInventories).forEach(cityId => {
     newInventories[cityId] = {};

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { api } from './api';
 import StartScreen from './components/StartScreen';
 import GameMap from './components/GameMap';
@@ -8,8 +9,13 @@ import MoneyChart from './components/MoneyChart';
 import TradeLog from './components/TradeLog';
 import EventModal from './components/EventModal';
 import DestinationsPanel from './components/DestinationsPanel';
+import AuthPage from './components/AuthPage';
+import AdminPanel from './components/AdminPanel';
+import RecordsModal from './components/RecordsModal';
 
-function App() {
+function GameApp() {
+  const { user, logout, isAdmin } = useAuth();
+  const [view, setView] = useState('game');
   const [gameStarted, setGameStarted] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [caravan, setCaravan] = useState(null);
@@ -25,6 +31,7 @@ function App() {
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeEventResult, setActiveEventResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showRecords, setShowRecords] = useState(false);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -49,6 +56,38 @@ function App() {
     setGameStarted(true);
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
   }, [showMessage]);
+
+  const handleLoadRecord = useCallback(async (recordId) => {
+    try {
+      setLoading(true);
+      const result = await api.loadGame(recordId);
+      setSessionId(result.sessionId);
+      setCaravan(result.caravan);
+      setCurrentCity(result.currentCity);
+      setCurrentPrices(result.currentPrices);
+      setConnectedCities(result.connectedCities);
+      setAllGoods(result.allGoods);
+      setWeight(result.weight);
+      setGameStarted(true);
+      setActiveEvent(result.pendingEvent || null);
+      setShowRecords(false);
+      showMessage('游戏记录已加载！', 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showMessage]);
+
+  const handleSaveGame = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      await api.saveGame(sessionId);
+      showMessage('游戏已保存！', 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    }
+  }, [sessionId, showMessage]);
 
   const handleBuy = useCallback(async (goodId, amount) => {
     if (!sessionId) return;
@@ -155,14 +194,61 @@ function App() {
     setSelectedDestination(city.id);
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    if (gameStarted && sessionId) {
+      try {
+        await api.saveGame(sessionId);
+      } catch (err) {
+        console.error('保存游戏失败:', err);
+      }
+    }
+    await logout();
+    setGameStarted(false);
+    setSessionId(null);
+    setCaravan(null);
+    setCurrentCity(null);
+    setCurrentPrices({});
+    setConnectedCities([]);
+    setAllGoods([]);
+    setWeight(0);
+    setSelectedDestination(null);
+    setActiveEvent(null);
+    setActiveEventResult(null);
+    setView('game');
+  }, [logout, gameStarted, sessionId]);
+
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  if (view === 'admin') {
+    return <AdminPanel onBack={() => setView('game')} />;
+  }
+
   if (!gameStarted) {
     return (
       <div className="app">
         <header className="app-header">
-          <h1>🏜️ 废土商队模拟器</h1>
-          <p>在末日废土中建立你的贸易帝国 - 低买高卖，生存致富</p>
+          <div>
+            <h1>🏜️ 废土商队模拟器</h1>
+            <p>在末日废土中建立你的贸易帝国 - 低买高卖，生存致富</p>
+          </div>
+          <div className="user-nav">
+            <span>👤 {user.username}</span>
+            <button onClick={() => setShowRecords(true)}>📜 记录</button>
+            {isAdmin && (
+              <button onClick={() => setView('admin')}>🎛️ 管理</button>
+            )}
+            <button onClick={handleLogout}>退出</button>
+          </div>
         </header>
         <StartScreen onGameStart={handleGameStart} />
+        {showRecords && (
+          <RecordsModal
+            onClose={() => setShowRecords(false)}
+            onLoadRecord={handleLoadRecord}
+          />
+        )}
       </div>
     );
   }
@@ -170,12 +256,23 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🏜️ 废土商队模拟器</h1>
-        <p>
-          {caravan?.name} - 领袖: {caravan?.leader}
-          {' | '}旅行次数: {caravan?.travelCount}
-          {' | '}当前位置: {currentCity?.name || '旅途中...'}
-        </p>
+        <div>
+          <h1>🏜️ 废土商队模拟器</h1>
+          <p>
+            {caravan?.name} - 领袖: {caravan?.leader}
+            {' | '}旅行次数: {caravan?.travelCount}
+            {' | '}当前位置: {currentCity?.name || '旅途中...'}
+          </p>
+        </div>
+        <div className="user-nav">
+          <span>👤 {user.username}</span>
+          <button onClick={handleSaveGame}>💾 保存</button>
+          <button onClick={() => setShowRecords(true)}>📜 记录</button>
+          {isAdmin && (
+            <button onClick={() => setView('admin')}>🎛️ 管理</button>
+          )}
+          <button onClick={handleLogout}>退出</button>
+        </div>
       </header>
 
       <div className="main-game">
@@ -272,6 +369,13 @@ function App() {
         caravan={caravan}
       />
 
+      {showRecords && (
+        <RecordsModal
+          onClose={() => setShowRecords(false)}
+          onLoadRecord={handleLoadRecord}
+        />
+      )}
+
       {loading && (
         <div style={{
           position: 'fixed',
@@ -288,6 +392,14 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <GameApp />
+    </AuthProvider>
   );
 }
 

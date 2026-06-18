@@ -2,8 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { cities, connections } = require('./data/cities');
-const { goods } = require('./data/goods');
+const { initAllData, getGoodsData, getCitiesData, getEventsData } = require('./data/initData');
+const store = require('./data/store');
+const { authMiddleware } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const recordsRoutes = require('./routes/records');
 const {
   calculateCityPrices,
   calculateTravelCost,
@@ -18,13 +22,33 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+initAllData();
+
 app.use(cors());
 app.use(express.json());
 
 const gameSessions = new Map();
 const cityInventoriesCache = new Map();
 
+function getCities() {
+  return getCitiesData().cities;
+}
+
+function getConnections() {
+  return getCitiesData().connections;
+}
+
+function getGoods() {
+  return getGoodsData();
+}
+
+function getEvents() {
+  return getEventsData();
+}
+
 function getInitialCityInventories() {
+  const cities = getCities();
+  const goods = getGoods();
   const inventories = {};
   cities.forEach(city => {
     inventories[city.id] = {};
@@ -42,21 +66,45 @@ function getOrCreateCityInventories(sessionId) {
   return cityInventoriesCache.get(sessionId);
 }
 
+function saveGameRecordForUser(userId, sessionId, game) {
+  if (!userId) return;
+  const cityInventories = cityInventoriesCache.get(sessionId);
+  const record = {
+    ...game,
+    cityInventories,
+    updatedAt: Date.now()
+  };
+  store.saveGameRecord(userId, sessionId, record);
+}
+
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/records', recordsRoutes);
+
 app.get('/api/cities', (req, res) => {
-  res.json({ cities, connections });
+  const citiesData = getCitiesData();
+  res.json({ cities: citiesData.cities, connections: citiesData.connections });
 });
 
 app.get('/api/goods', (req, res) => {
-  res.json({ goods });
+  res.json({ goods: getGoods() });
 });
 
-app.post('/api/game/create', (req, res) => {
+app.get('/api/events', (req, res) => {
+  res.json({ events: getEvents() });
+});
+
+app.post('/api/game/create', authMiddleware, (req, res) => {
   const { caravanName, leaderName, startCityId } = req.body;
+  const userId = req.user.id;
 
   if (!caravanName || !leaderName || !startCityId) {
     return res.status(400).json({ error: '缺少必要参数' });
   }
 
+  const cities = getCities();
+  const goods = getGoods();
+  const connections = getConnections();
   const startCity = cities.find(c => c.id === startCityId);
   if (!startCity) {
     return res.status(400).json({ error: '起始城市不存在' });
@@ -85,17 +133,22 @@ app.post('/api/game/create', (req, res) => {
     reputation: 50
   };
 
-  gameSessions.set(sessionId, {
+  const game = {
+    userId,
     caravan,
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     pendingEvent: null
-  });
+  };
 
+  gameSessions.set(sessionId, game);
   cityInventoriesCache.set(sessionId, getInitialCityInventories());
 
   const cityInventories = cityInventoriesCache.get(sessionId);
-  const currentPrices = calculateCityPrices(startCityId, cityInventories[startCityId]);
-  const connectedCities = getConnectedCities(startCityId);
+  const currentPrices = calculateCityPrices(startCityId, cityInventories[startCityId], startCity, goods);
+  const connectedCities = getConnectedCities(startCityId, cities, connections);
+
+  saveGameRecordForUser(userId, sessionId, game);
 
   res.json({
     sessionId,
@@ -103,9 +156,57 @@ app.post('/api/game/create', (req, res) => {
     currentCity: startCity,
     currentPrices,
     connectedCities,
-    weight: calculateCaravanWeight(caravan.inventory),
+    weight: calculateCaravanWeight(caravan.inventory, goods),
     allGoods: goods
   });
+});
+
+app.post('/api/game/load', authMiddleware, (req, res) => {
+  const { recordId } = req.body;
+  const userId = req.user.id;
+
+  const record = store.getGameRecord(userId, recordId);
+  if (!record) {
+    return res.status(404).json({ error: '游戏记录不存在' });
+  }
+
+  gameSessions.set(recordId, record);
+  if (record.cityInventories) {
+    cityInventoriesCache.set(recordId, record.cityInventories);
+  }
+
+  const cities = getCities();
+  const goods = getGoods();
+  const connections = getConnections();
+  const cityInventories = getOrCreateCityInventories(recordId);
+  const currentCity = cities.find(c => c.id === record.caravan.currentCityId);
+  const currentPrices = calculateCityPrices(currentCity.id, cityInventories[currentCity.id], currentCity, goods);
+  const connectedCities = getConnectedCities(currentCity.id, cities, connections);
+
+  res.json({
+    sessionId: recordId,
+    caravan: record.caravan,
+    currentCity,
+    currentPrices,
+    connectedCities,
+    weight: calculateCaravanWeight(record.caravan.inventory, goods),
+    allGoods: goods,
+    pendingEvent: record.pendingEvent
+  });
+});
+
+app.post('/api/game/save', authMiddleware, (req, res) => {
+  const { sessionId } = req.body;
+  const userId = req.user.id;
+
+  if (!gameSessions.has(sessionId)) {
+    return res.status(404).json({ error: '游戏会话不存在' });
+  }
+
+  const game = gameSessions.get(sessionId);
+  saveGameRecordForUser(userId, sessionId, game);
+
+  res.json({ success: true, message: '游戏已保存' });
 });
 
 app.post('/api/game/state', (req, res) => {
@@ -116,17 +217,20 @@ app.post('/api/game/state', (req, res) => {
   }
 
   const game = gameSessions.get(sessionId);
+  const cities = getCities();
+  const goods = getGoods();
+  const connections = getConnections();
   const cityInventories = getOrCreateCityInventories(sessionId);
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
-  const currentPrices = calculateCityPrices(currentCity.id, cityInventories[currentCity.id]);
-  const connectedCities = getConnectedCities(currentCity.id);
+  const currentPrices = calculateCityPrices(currentCity.id, cityInventories[currentCity.id], currentCity, goods);
+  const connectedCities = getConnectedCities(currentCity.id, cities, connections);
 
   res.json({
     caravan: game.caravan,
     currentCity,
     currentPrices,
     connectedCities,
-    weight: calculateCaravanWeight(game.caravan.inventory),
+    weight: calculateCaravanWeight(game.caravan.inventory, goods),
     pendingEvent: game.pendingEvent,
     allGoods: goods
   });
@@ -145,13 +249,16 @@ app.post('/api/trade/buy', (req, res) => {
 
   const game = gameSessions.get(sessionId);
   const cityInventories = getOrCreateCityInventories(sessionId);
+  const goods = getGoods();
+  const cities = getCities();
   const good = goods.find(g => g.id === goodId);
 
   if (!good) {
     return res.status(400).json({ error: '货物不存在' });
   }
 
-  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId]);
+  const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
+  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
   const priceInfo = currentPrices[goodId];
 
   if (!priceInfo) {
@@ -167,7 +274,7 @@ app.post('/api/trade/buy', (req, res) => {
     return res.status(400).json({ error: '金币不足' });
   }
 
-  const currentWeight = calculateCaravanWeight(game.caravan.inventory);
+  const currentWeight = calculateCaravanWeight(game.caravan.inventory, goods);
   const addedWeight = good.weight * amount;
   if (currentWeight + addedWeight > game.caravan.maxCarryWeight) {
     return res.status(400).json({ error: '负重超限' });
@@ -184,7 +291,6 @@ app.post('/api/trade/buy', (req, res) => {
     true
   );
 
-  const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
   game.caravan.tradeHistory.push({
     id: uuidv4(),
     type: 'buy',
@@ -203,8 +309,13 @@ app.post('/api/trade/buy', (req, res) => {
     money: game.caravan.money
   });
 
-  const updatedPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId]);
-  const weight = calculateCaravanWeight(game.caravan.inventory);
+  const updatedPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const weight = calculateCaravanWeight(game.caravan.inventory, goods);
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
 
   res.json({
     success: true,
@@ -228,6 +339,8 @@ app.post('/api/trade/sell', (req, res) => {
 
   const game = gameSessions.get(sessionId);
   const cityInventories = getOrCreateCityInventories(sessionId);
+  const goods = getGoods();
+  const cities = getCities();
   const good = goods.find(g => g.id === goodId);
 
   if (!good) {
@@ -239,7 +352,8 @@ app.post('/api/trade/sell', (req, res) => {
     return res.status(400).json({ error: '库存不足' });
   }
 
-  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId]);
+  const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
+  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
   const priceInfo = currentPrices[goodId];
 
   const totalEarning = priceInfo.sellPrice * amount;
@@ -255,7 +369,6 @@ app.post('/api/trade/sell', (req, res) => {
     false
   );
 
-  const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
   game.caravan.tradeHistory.push({
     id: uuidv4(),
     type: 'sell',
@@ -274,8 +387,13 @@ app.post('/api/trade/sell', (req, res) => {
     money: game.caravan.money
   });
 
-  const updatedPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId]);
-  const weight = calculateCaravanWeight(game.caravan.inventory);
+  const updatedPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const weight = calculateCaravanWeight(game.caravan.inventory, goods);
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
 
   res.json({
     success: true,
@@ -294,12 +412,16 @@ app.post('/api/travel/start', (req, res) => {
   }
 
   const game = gameSessions.get(sessionId);
+  const connections = getConnections();
+  const cities = getCities();
+  const goods = getGoods();
+  const events = getEvents();
 
   if (game.pendingEvent) {
     return res.status(400).json({ error: '请先处理当前事件' });
   }
 
-  const travelCost = calculateTravelCost(game.caravan.currentCityId, toCityId);
+  const travelCost = calculateTravelCost(game.caravan.currentCityId, toCityId, connections);
 
   if (!travelCost) {
     return res.status(400).json({ error: '无法到达该城市' });
@@ -327,10 +449,10 @@ app.post('/api/travel/start', (req, res) => {
   game.caravan.inventory['fuel'] -= travelCost.fuelCost;
   game.caravan.travelCount += 1;
 
-  const newCityInventories = simulateMarketFluctuation(cityInventoriesCache.get(sessionId));
+  const newCityInventories = simulateMarketFluctuation(cityInventoriesCache.get(sessionId), goods);
   cityInventoriesCache.set(sessionId, newCityInventories);
 
-  const randomEvent = rollRandomEvent(travelCost.danger);
+  const randomEvent = rollRandomEvent(travelCost.danger, events);
 
   if (randomEvent) {
     if (randomEvent.id === 'friendly-travelers' || randomEvent.id === 'hidden-cache' ||
@@ -342,7 +464,7 @@ app.post('/api/travel/start', (req, res) => {
         needsResolution: true
       };
     } else {
-      const eventResult = applyEventEffect(randomEvent, game.caravan);
+      const eventResult = applyEventEffect(randomEvent, game.caravan, goods);
       game.caravan.money = eventResult.caravanUpdates.money;
       game.caravan.inventory = eventResult.caravanUpdates.inventory;
       game.caravan.stamina = eventResult.caravanUpdates.stamina;
@@ -364,8 +486,13 @@ app.post('/api/travel/start', (req, res) => {
       });
 
       const arrivedCity = cities.find(c => c.id === toCityId);
-      const arrivedPrices = calculateCityPrices(toCityId, newCityInventories[toCityId]);
-      const connectedCities = getConnectedCities(toCityId);
+      const arrivedPrices = calculateCityPrices(toCityId, newCityInventories[toCityId], arrivedCity, goods);
+      const connectedCities = getConnectedCities(toCityId, cities, connections);
+
+      game.updatedAt = Date.now();
+      if (game.userId) {
+        saveGameRecordForUser(game.userId, sessionId, game);
+      }
 
       res.json({
         success: true,
@@ -376,7 +503,7 @@ app.post('/api/travel/start', (req, res) => {
         currentCity: arrivedCity,
         currentPrices: arrivedPrices,
         connectedCities,
-        weight: calculateCaravanWeight(game.caravan.inventory)
+        weight: calculateCaravanWeight(game.caravan.inventory, goods)
       });
       return;
     }
@@ -387,8 +514,13 @@ app.post('/api/travel/start', (req, res) => {
   }
 
   const arrivedCity = cities.find(c => c.id === toCityId);
-  const arrivedPrices = calculateCityPrices(toCityId, newCityInventories[toCityId]);
-  const connectedCities = getConnectedCities(toCityId);
+  const arrivedPrices = calculateCityPrices(toCityId, newCityInventories[toCityId], arrivedCity, goods);
+  const connectedCities = getConnectedCities(toCityId, cities, connections);
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
 
   res.json({
     success: true,
@@ -398,7 +530,7 @@ app.post('/api/travel/start', (req, res) => {
     currentCity: game.pendingEvent ? null : arrivedCity,
     currentPrices: game.pendingEvent ? null : arrivedPrices,
     connectedCities: game.pendingEvent ? null : connectedCities,
-    weight: calculateCaravanWeight(game.caravan.inventory)
+    weight: calculateCaravanWeight(game.caravan.inventory, goods)
   });
 });
 
@@ -418,6 +550,9 @@ app.post('/api/event/resolve', (req, res) => {
   const event = game.pendingEvent;
   const targetCityId = toCityId || event.toCityId;
   const resultMessages = [];
+  const goods = getGoods();
+  const cities = getCities();
+  const connections = getConnections();
 
   if (event.id === 'friendly-travelers') {
     if (choice === 'accept') {
@@ -474,8 +609,13 @@ app.post('/api/event/resolve', (req, res) => {
 
   const cityInventories = cityInventoriesCache.get(sessionId);
   const arrivedCity = cities.find(c => c.id === targetCityId);
-  const arrivedPrices = calculateCityPrices(targetCityId, cityInventories[targetCityId]);
-  const connectedCities = getConnectedCities(targetCityId);
+  const arrivedPrices = calculateCityPrices(targetCityId, cityInventories[targetCityId], arrivedCity, goods);
+  const connectedCities = getConnectedCities(targetCityId, cities, connections);
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
 
   res.json({
     success: true,
@@ -484,7 +624,7 @@ app.post('/api/event/resolve', (req, res) => {
     currentCity: arrivedCity,
     currentPrices: arrivedPrices,
     connectedCities,
-    weight: calculateCaravanWeight(game.caravan.inventory)
+    weight: calculateCaravanWeight(game.caravan.inventory, goods)
   });
 });
 
@@ -496,6 +636,8 @@ app.post('/api/rest', (req, res) => {
   }
 
   const game = gameSessions.get(sessionId);
+  const goods = getGoods();
+  const cities = getCities();
   const restCost = 50;
 
   if (game.caravan.money < restCost) {
@@ -519,13 +661,19 @@ app.post('/api/rest', (req, res) => {
   game.caravan.stamina = Math.min(game.caravan.maxStamina, game.caravan.stamina + 50);
 
   const cityInventories = cityInventoriesCache.get(sessionId);
-  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId]);
+  const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
+  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
 
   res.json({
     success: true,
     caravan: game.caravan,
     currentPrices,
-    weight: calculateCaravanWeight(game.caravan.inventory),
+    weight: calculateCaravanWeight(game.caravan.inventory, goods),
     message: `商队休整完毕，体力恢复50点。消耗：${restCost}金币、干粮x${foodNeeded}、净水x${waterNeeded}`
   });
 });

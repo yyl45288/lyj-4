@@ -1,0 +1,89 @@
+{
+  "userId": "1aeda6f4-9683-4ea9-8083-696cd62d425b",
+  "caravan": {
+    "id": "365185e3-42ec-482a-8ced-ff049f2fe06d",
+    "name": "测试商队",
+    "leader": "测试玩家",
+    "money": 1000,
+    "maxCarryWeight": 100,
+    "stamina": 100,
+    "maxStamina": 100,
+    "currentCityId": "city-1",
+    "inventory": {
+      "water": 5,
+      "food": 5,
+      "medicine": 2,
+      "weapons": 1,
+      "scrap": 2
+    },
+    "tradeHistory": [],
+    "moneyHistory": [
+      {
+        "time": 0,
+        "money": 1000
+      }
+    ],
+    "travelCount": 0,
+    "reputation": 50
+  },
+  "createdAt": 1781797581107,
+  "updatedAt": 1781797592580,
+  "pendingEvent": null,
+  "cityInventories": {
+    "city-1": {
+      "water": 44,
+      "food": 87,
+      "medicine": 48,
+      "fuel": 73,
+      "weapons": 35,
+      "steel": 92,
+      "scrap": 90,
+      "drugs": 96,
+      "clothes": 55
+    },
+    "city-2": {
+      "water": 74,
+      "food": 32,
+      "medicine": 68,
+      "fuel": 99,
+      "weapons": 51,
+      "steel": 78,
+      "scrap": 36,
+      "drugs": 32,
+      "clothes": 99
+    },
+    "city-3": {
+      "water": 64,
+      "food": 82,
+      "medicine": 40,
+      "fuel": 92,
+      "weapons": 85,
+      "steel": 51,
+      "scrap": 34,
+      "drugs": 57,
+      "clothes": 80
+    },
+    "city-4": {
+      "water": 41,
+      "food": 64,
+      "medicine": 97,
+      "fuel": 80,
+      "weapons": 30,
+      "steel": 37,
+      "scrap": 94,
+      "drugs": 65,
+      "clothes": 46
+    },
+    "city-5": {
+      "water": 56,
+      "food": 91,
+      "medicine": 49,
+      "fuel": 64,
+      "weapons": 86,
+      "steel": 55,
+      "scrap": 60,
+      "drugs": 72,
+      "clothes": 74
+    }
+  }
+}
