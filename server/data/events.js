@@ -1,0 +1,115 @@
+const events = [
+  {
+    id: 'bandit-attack',
+    name: '强盗袭击',
+    type: 'danger',
+    description: '一群沙漠强盗从沙丘后冲出，包围了你的商队！',
+    minDanger: 0.3,
+    effects: [
+      { type: 'loseGoods', chance: 0.5, goodsLossPercent: 0.2 },
+      { type: 'loseMoney', chance: 0.4, moneyLossPercent: 0.15 },
+      { type: 'loseStamina', chance: 0.8, staminaLoss: 25 },
+      { type: 'fightBack', chance: 0.3, rewardMoney: 200 }
+    ]
+  },
+  {
+    id: 'sandstorm',
+    name: '沙暴来袭',
+    type: 'danger',
+    description: '天空突然变得昏黄，一场巨大的沙暴正在逼近！',
+    minDanger: 0.2,
+    effects: [
+      { type: 'loseStamina', chance: 1.0, staminaLoss: 20 },
+      { type: 'delay', chance: 0.6, extraStaminaCost: 10 }
+    ]
+  },
+  {
+    id: 'broken-vehicle',
+    name: '车辆故障',
+    type: 'danger',
+    description: '你的运输车辆在颠簸的道路上抛锚了，需要修理。',
+    minDanger: 0.15,
+    effects: [
+      { type: 'useGoods', chance: 1.0, requiredGoods: 'scrap', amount: 3, staminaLoss: 10 },
+      { type: 'loseMoney', chance: 0.7, moneyLoss: 100 }
+    ]
+  },
+  {
+    id: 'radiation-zone',
+    name: '辐射区',
+    type: 'danger',
+    description: '你误入了一个高辐射区域，队员们开始感到不适。',
+    minDanger: 0.4,
+    effects: [
+      { type: 'loseStamina', chance: 1.0, staminaLoss: 30 },
+      { type: 'useGoods', chance: 0.5, requiredGoods: 'medicine', amount: 2, staminaRestore: 20 }
+    ]
+  },
+  {
+    id: 'friendly-travelers',
+    name: '友好旅人',
+    type: 'good',
+    description: '你在路上遇到了一群友好的旅人，他们愿意与你分享物资和情报。',
+    minDanger: 0.1,
+    effects: [
+      { type: 'gainMoney', chance: 0.4, moneyGain: 150 },
+      { type: 'gainGoods', chance: 0.6, randomGoods: true, amount: 5 },
+      { type: 'restoreStamina', chance: 0.5, staminaRestore: 15 }
+    ]
+  },
+  {
+    id: 'hidden-cache',
+    name: '发现宝藏',
+    type: 'good',
+    description: '你在废墟中发现了一个隐藏的补给箱！',
+    minDanger: 0.2,
+    effects: [
+      { type: 'gainGoods', chance: 1.0, randomGoods: true, amount: 10 },
+      { type: 'gainMoney', chance: 0.5, moneyGain: 300 }
+    ]
+  },
+  {
+    id: 'merchant',
+    name: '流浪商人',
+    type: 'good',
+    description: '一个神秘的流浪商人出现在你面前，提供了一笔特殊交易。',
+    minDanger: 0.1,
+    effects: [
+      { type: 'specialTrade', chance: 1.0 }
+    ]
+  },
+  {
+    id: 'water-source',
+    name: '发现水源',
+    type: 'good',
+    description: '你的商队发现了一处隐藏的地下水源！',
+    minDanger: 0.1,
+    effects: [
+      { type: 'gainGoods', chance: 1.0, goodsId: 'water', amount: 8 },
+      { type: 'restoreStamina', chance: 1.0, staminaRestore: 10 }
+    ]
+  },
+  {
+    id: 'checkpoint',
+    name: '军阀关卡',
+    type: 'neutral',
+    description: '当地军阀设置的关卡挡住了去路，他们要求缴纳通行费。',
+    minDanger: 0.25,
+    effects: [
+      { type: 'loseMoney', chance: 0.7, moneyLoss: 100 },
+      { type: 'loseGoods', chance: 0.3, goodsLossPercent: 0.1 }
+    ]
+  },
+  {
+    id: 'refugees',
+    name: '难民求助',
+    type: 'neutral',
+    description: '一群饥饿的难民向你的商队求助，请求一些食物和水。',
+    minDanger: 0.1,
+    effects: [
+      { type: 'charity', chance: 1.0 }
+    ]
+  }
+];
+
+module.exports = { events };

@@ -1,0 +1,26 @@
+{
+  "name": "wasteland-caravan-simulator",
+  "version": "1.0.0",
+  "description": "废土商队模拟器 - React + Node.js + Express",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "nodemon server/index.js",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && cd client && npm install",
+    "build": "cd client && npm run build"
+  },
+  "keywords": ["wasteland", "caravan", "simulator", "game"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "concurrently": "^8.2.0"
+  }
+}
