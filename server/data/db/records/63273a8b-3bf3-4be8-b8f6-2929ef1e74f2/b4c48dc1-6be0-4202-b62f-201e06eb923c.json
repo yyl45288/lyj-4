@@ -1,0 +1,89 @@
+{
+  "userId": "63273a8b-3bf3-4be8-b8f6-2929ef1e74f2",
+  "caravan": {
+    "id": "bbc872f7-7cd8-4c44-bd12-e5b9128a9455",
+    "name": "111111",
+    "leader": "111111",
+    "money": 1000,
+    "maxCarryWeight": 100,
+    "stamina": 100,
+    "maxStamina": 100,
+    "currentCityId": "city-1",
+    "inventory": {
+      "water": 5,
+      "food": 5,
+      "medicine": 2,
+      "weapons": 1,
+      "scrap": 2
+    },
+    "tradeHistory": [],
+    "moneyHistory": [
+      {
+        "time": 0,
+        "money": 1000
+      }
+    ],
+    "travelCount": 0,
+    "reputation": 50
+  },
+  "createdAt": 1781800848920,
+  "updatedAt": 1781800848921,
+  "pendingEvent": null,
+  "cityInventories": {
+    "city-1": {
+      "water": 30,
+      "food": 69,
+      "medicine": 89,
+      "fuel": 66,
+      "weapons": 48,
+      "steel": 75,
+      "scrap": 48,
+      "drugs": 32,
+      "clothes": 98
+    },
+    "city-2": {
+      "water": 97,
+      "food": 32,
+      "medicine": 82,
+      "fuel": 95,
+      "weapons": 70,
+      "steel": 62,
+      "scrap": 71,
+      "drugs": 82,
+      "clothes": 30
+    },
+    "city-3": {
+      "water": 92,
+      "food": 53,
+      "medicine": 56,
+      "fuel": 81,
+      "weapons": 83,
+      "steel": 58,
+      "scrap": 70,
+      "drugs": 90,
+      "clothes": 55
+    },
+    "city-4": {
+      "water": 61,
+      "food": 72,
+      "medicine": 63,
+      "fuel": 86,
+      "weapons": 56,
+      "steel": 34,
+      "scrap": 48,
+      "drugs": 70,
+      "clothes": 65
+    },
+    "city-5": {
+      "water": 42,
+      "food": 89,
+      "medicine": 51,
+      "fuel": 85,
+      "weapons": 78,
+      "steel": 86,
+      "scrap": 37,
+      "drugs": 46,
+      "clothes": 76
+    }
+  }
+}

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 
-function StartScreen({ onGameStart }) {
+function StartScreen({ onGameStart, onLoadLatest }) {
   const [cities, setCities] = useState([]);
   const [caravanName, setCaravanName] = useState('');
   const [leaderName, setLeaderName] = useState('');
   const [startCityId, setStartCityId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [latestRecord, setLatestRecord] = useState(null);
+  const [loadingRecord, setLoadingRecord] = useState(true);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -18,7 +20,22 @@ function StartScreen({ onGameStart }) {
     }).catch(err => {
       setError('加载城市数据失败: ' + err.message);
     });
+
+    loadLatestRecord();
   }, []);
+
+  const loadLatestRecord = async () => {
+    try {
+      const data = await api.getRecords();
+      if (data.records && data.records.length > 0) {
+        setLatestRecord(data.records[0]);
+      }
+    } catch (err) {
+      console.error('加载最新记录失败:', err);
+    } finally {
+      setLoadingRecord(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,8 +57,53 @@ function StartScreen({ onGameStart }) {
     }
   };
 
+  const handleContinue = async () => {
+    if (!latestRecord) return;
+    setLoading(true);
+    try {
+      const gameData = await api.loadGame(latestRecord.id);
+      onLoadLatest(gameData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    return new Date(timestamp).toLocaleString('zh-CN');
+  };
+
   return (
     <div className="start-screen">
+      {latestRecord && !loadingRecord && (
+        <div className="create-caravan-card" style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ marginBottom: '1rem' }}>📂 继续上次游戏</h3>
+          <div className="record-card" style={{ cursor: 'pointer', marginBottom: '1rem' }} onClick={handleContinue}>
+            <div className="record-card-header">
+              <span className="record-caravan-name">{latestRecord.caravanName}</span>
+              <span style={{ fontSize: '0.8rem', color: '#e94560', fontWeight: '600' }}>最新</span>
+            </div>
+            <div className="record-stats">
+              <span>领袖: <strong>{latestRecord.leaderName}</strong></span>
+              <span>金币: <strong>{latestRecord.money?.toLocaleString()}</strong></span>
+              <span>旅行次数: <strong>{latestRecord.travelCount}</strong></span>
+            </div>
+            <div className="record-date">
+              更新于: {formatDate(latestRecord.updatedAt)}
+            </div>
+          </div>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            onClick={handleContinue}
+            disabled={loading}
+          >
+            {loading ? '加载中...' : '🚀 继续游戏'}
+          </button>
+        </div>
+      )}
+
       <div className="create-caravan-card">
         <h2>🏜️ 创建你的商队</h2>
         <p style={{ textAlign: 'center', color: '#a0a0a0', marginBottom: '1.5rem' }}>

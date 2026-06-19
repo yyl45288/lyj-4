@@ -1,0 +1,122 @@
+{
+  "userId": "63273a8b-3bf3-4be8-b8f6-2929ef1e74f2",
+  "caravan": {
+    "id": "38d3ce25-a7ac-4ac4-bc53-fb712800b3eb",
+    "name": "111111",
+    "leader": "111111",
+    "money": 935,
+    "maxCarryWeight": 100,
+    "stamina": 100,
+    "maxStamina": 100,
+    "currentCityId": "city-1",
+    "inventory": {
+      "water": 7,
+      "food": 5,
+      "medicine": 2,
+      "weapons": 1,
+      "scrap": 2
+    },
+    "tradeHistory": [
+      {
+        "id": "9ecaab3f-6bf7-4627-9b90-1cd6261a1f96",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 35,
+        "totalPrice": 35,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781800891911
+      },
+      {
+        "id": "ff743815-2c7a-476f-9434-34d45e0af570",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 30,
+        "totalPrice": 30,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781801236659
+      }
+    ],
+    "moneyHistory": [
+      {
+        "time": 0,
+        "money": 1000
+      },
+      {
+        "time": 1,
+        "money": 965
+      },
+      {
+        "time": 2,
+        "money": 935
+      }
+    ],
+    "travelCount": 0,
+    "reputation": 50
+  },
+  "createdAt": 1781800873851,
+  "updatedAt": 1781801236659,
+  "pendingEvent": null,
+  "cityInventories": {
+    "city-1": {
+      "water": 87,
+      "food": 73,
+      "medicine": 30,
+      "fuel": 79,
+      "weapons": 38,
+      "steel": 38,
+      "scrap": 85,
+      "drugs": 96,
+      "clothes": 60
+    },
+    "city-2": {
+      "water": 31,
+      "food": 74,
+      "medicine": 95,
+      "fuel": 88,
+      "weapons": 54,
+      "steel": 43,
+      "scrap": 70,
+      "drugs": 95,
+      "clothes": 62
+    },
+    "city-3": {
+      "water": 45,
+      "food": 66,
+      "medicine": 56,
+      "fuel": 76,
+      "weapons": 42,
+      "steel": 49,
+      "scrap": 44,
+      "drugs": 47,
+      "clothes": 98
+    },
+    "city-4": {
+      "water": 59,
+      "food": 37,
+      "medicine": 97,
+      "fuel": 80,
+      "weapons": 78,
+      "steel": 58,
+      "scrap": 30,
+      "drugs": 76,
+      "clothes": 62
+    },
+    "city-5": {
+      "water": 49,
+      "food": 72,
+      "medicine": 42,
+      "fuel": 62,
+      "weapons": 51,
+      "steel": 89,
+      "scrap": 47,
+      "drugs": 99,
+      "clothes": 75
+    }
+  }
+}

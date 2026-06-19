@@ -6,5 +6,21 @@
     "role": "admin",
     "createdAt": 1781796185842,
     "updatedAt": 1781796185842
+  },
+  {
+    "id": "63273a8b-3bf3-4be8-b8f6-2929ef1e74f2",
+    "username": "111111",
+    "password": "$2b$10$icmXGZ5m8plwDCsXGju6F..26APSd4V3aDmghT9cJLbc5h0gkX3Lu",
+    "role": "user",
+    "createdAt": 1781800845951,
+    "updatedAt": 1781800845951
+  },
+  {
+    "id": "338eb4f5-8b43-41f0-b0ca-f7715ac2d64e",
+    "username": "testuser",
+    "password": "$2b$10$ZULOTYTqW.92nPzFV5G7l.bhWJwdTvz3tkAmd5dU6ocx79CZCYQKq",
+    "role": "user",
+    "createdAt": 1781837136945,
+    "updatedAt": 1781837136945
   }
 ]

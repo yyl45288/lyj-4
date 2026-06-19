@@ -30,6 +30,35 @@ app.use(express.json());
 const gameSessions = new Map();
 const cityInventoriesCache = new Map();
 
+function verifyGameSession(req, res, next) {
+  const { sessionId } = req.body;
+  if (!sessionId) {
+    return res.status(400).json({ error: '缺少会话ID' });
+  }
+  
+  if (!gameSessions.has(sessionId)) {
+    if (req.user) {
+      const record = store.getGameRecord(req.user.id, sessionId);
+      if (record) {
+        gameSessions.set(sessionId, record);
+        if (record.cityInventories) {
+          cityInventoriesCache.set(sessionId, record.cityInventories);
+        }
+        req.game = record;
+        return next();
+      }
+    }
+    return res.status(404).json({ error: '游戏会话不存在，请重新开始或加载游戏' });
+  }
+  
+  const game = gameSessions.get(sessionId);
+  if (req.user && game.userId !== req.user.id) {
+    return res.status(403).json({ error: '无权访问此游戏会话' });
+  }
+  req.game = game;
+  next();
+}
+
 function getCities() {
   return getCitiesData().cities;
 }
@@ -195,28 +224,19 @@ app.post('/api/game/load', authMiddleware, (req, res) => {
   });
 });
 
-app.post('/api/game/save', authMiddleware, (req, res) => {
+app.post('/api/game/save', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId } = req.body;
   const userId = req.user.id;
+  const game = req.game;
 
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
-
-  const game = gameSessions.get(sessionId);
   saveGameRecordForUser(userId, sessionId, game);
 
   res.json({ success: true, message: '游戏已保存' });
 });
 
-app.post('/api/game/state', (req, res) => {
+app.post('/api/game/state', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId } = req.body;
-
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
-
-  const game = gameSessions.get(sessionId);
+  const game = req.game;
   const cities = getCities();
   const goods = getGoods();
   const connections = getConnections();
@@ -236,18 +256,13 @@ app.post('/api/game/state', (req, res) => {
   });
 });
 
-app.post('/api/trade/buy', (req, res) => {
+app.post('/api/trade/buy', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId, goodId, amount } = req.body;
-
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
+  const game = req.game;
 
   if (!goodId || !amount || amount <= 0) {
     return res.status(400).json({ error: '无效的交易参数' });
   }
-
-  const game = gameSessions.get(sessionId);
   const cityInventories = getOrCreateCityInventories(sessionId);
   const goods = getGoods();
   const cities = getCities();
@@ -326,18 +341,13 @@ app.post('/api/trade/buy', (req, res) => {
   });
 });
 
-app.post('/api/trade/sell', (req, res) => {
+app.post('/api/trade/sell', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId, goodId, amount } = req.body;
-
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
+  const game = req.game;
 
   if (!goodId || !amount || amount <= 0) {
     return res.status(400).json({ error: '无效的交易参数' });
   }
-
-  const game = gameSessions.get(sessionId);
   const cityInventories = getOrCreateCityInventories(sessionId);
   const goods = getGoods();
   const cities = getCities();
@@ -404,14 +414,9 @@ app.post('/api/trade/sell', (req, res) => {
   });
 });
 
-app.post('/api/travel/start', (req, res) => {
+app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId, toCityId } = req.body;
-
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
-
-  const game = gameSessions.get(sessionId);
+  const game = req.game;
   const connections = getConnections();
   const cities = getCities();
   const goods = getGoods();
@@ -534,14 +539,9 @@ app.post('/api/travel/start', (req, res) => {
   });
 });
 
-app.post('/api/event/resolve', (req, res) => {
+app.post('/api/event/resolve', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId, choice, toCityId } = req.body;
-
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
-
-  const game = gameSessions.get(sessionId);
+  const game = req.game;
 
   if (!game.pendingEvent) {
     return res.status(400).json({ error: '没有待处理的事件' });
@@ -628,14 +628,9 @@ app.post('/api/event/resolve', (req, res) => {
   });
 });
 
-app.post('/api/rest', (req, res) => {
+app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
   const { sessionId } = req.body;
-
-  if (!gameSessions.has(sessionId)) {
-    return res.status(404).json({ error: '游戏会话不存在' });
-  }
-
-  const game = gameSessions.get(sessionId);
+  const game = req.game;
   const goods = getGoods();
   const cities = getCities();
   const restCost = 50;
@@ -686,5 +681,5 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.listen(PORT, () => {
-  console.log(`废土商队模拟器服务器已启动: http://localhost:${PORT}`);
+  console.log(`废土商队模拟器服务器已启动: http://0.0.0.0:${PORT}`);
 });

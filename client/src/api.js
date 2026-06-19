@@ -59,22 +59,22 @@ export const api = {
     apiCall('/api/game/save', 'POST', { sessionId }, true),
 
   getGameState: (sessionId) =>
-    apiCall('/api/game/state', 'POST', { sessionId }),
+    apiCall('/api/game/state', 'POST', { sessionId }, true),
 
   buyGoods: (sessionId, goodId, amount) =>
-    apiCall('/api/trade/buy', 'POST', { sessionId, goodId, amount }),
+    apiCall('/api/trade/buy', 'POST', { sessionId, goodId, amount }, true),
 
   sellGoods: (sessionId, goodId, amount) =>
-    apiCall('/api/trade/sell', 'POST', { sessionId, goodId, amount }),
+    apiCall('/api/trade/sell', 'POST', { sessionId, goodId, amount }, true),
 
   startTravel: (sessionId, toCityId) =>
-    apiCall('/api/travel/start', 'POST', { sessionId, toCityId }),
+    apiCall('/api/travel/start', 'POST', { sessionId, toCityId }, true),
 
   resolveEvent: (sessionId, choice, toCityId) =>
-    apiCall('/api/event/resolve', 'POST', { sessionId, choice, toCityId }),
+    apiCall('/api/event/resolve', 'POST', { sessionId, choice, toCityId }, true),
 
   rest: (sessionId) =>
-    apiCall('/api/rest', 'POST', { sessionId }),
+    apiCall('/api/rest', 'POST', { sessionId }, true),
 
   register: (username, password) =>
     apiCall('/api/auth/register', 'POST', { username, password }),

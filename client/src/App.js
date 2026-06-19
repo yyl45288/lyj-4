@@ -40,6 +40,12 @@ function GameApp() {
     }).catch(err => console.error('加载城市失败:', err));
   }, []);
 
+  useEffect(() => {
+    if (view === 'admin' && !isAdmin) {
+      setView('game');
+    }
+  }, [view, isAdmin]);
+
   const showMessage = useCallback((text, type = 'success') => {
     setMessage({ text, type });
     setTimeout(() => setMessage(null), 3000);
@@ -242,7 +248,7 @@ function GameApp() {
             <button onClick={handleLogout}>退出</button>
           </div>
         </header>
-        <StartScreen onGameStart={handleGameStart} />
+        <StartScreen onGameStart={handleGameStart} onLoadLatest={handleGameStart} />
         {showRecords && (
           <RecordsModal
             onClose={() => setShowRecords(false)}

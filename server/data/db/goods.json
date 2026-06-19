@@ -4,7 +4,7 @@
     "name": "净水",
     "description": "废土中最珍贵的资源，干净的饮用水。",
     "basePrice": 30,
-    "weight": 2,
+    "weight": 1,
     "icon": "💧"
   },
   {

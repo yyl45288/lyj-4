@@ -3,7 +3,7 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 function AdminPanel({ onBack }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('goods');
   const [stats, setStats] = useState(null);
   const [goods, setGoods] = useState([]);
@@ -15,6 +15,22 @@ function AdminPanel({ onBack }) {
   const [message, setMessage] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
+
+  if (!isAdmin) {
+    return (
+      <div className="admin-panel">
+        <div className="admin-header">
+          <button className="back-button" onClick={onBack}>
+            ← 返回游戏
+          </button>
+          <h2>🎛️ 后台管理系统</h2>
+        </div>
+        <div className="auth-error" style={{ marginTop: '2rem' }}>
+          您没有管理员权限，无法访问此页面
+        </div>
+      </div>
+    );
+  }
 
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
