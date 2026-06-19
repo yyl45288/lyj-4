@@ -32,6 +32,8 @@ function GameApp() {
   const [activeEventResult, setActiveEventResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showRecords, setShowRecords] = useState(false);
+  const [showNewGame, setShowNewGame] = useState(false);
+  const [checkingRecord, setCheckingRecord] = useState(true);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -41,10 +43,51 @@ function GameApp() {
   }, []);
 
   useEffect(() => {
+    if (isAdmin) {
+      setView('admin');
+      setGameStarted(false);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
     if (view === 'admin' && !isAdmin) {
       setView('game');
     }
   }, [view, isAdmin]);
+
+  useEffect(() => {
+    if (!user || isAdmin || gameStarted) {
+      setCheckingRecord(false);
+      return;
+    }
+
+    const loadLatestRecordIfExists = async () => {
+      try {
+        setCheckingRecord(true);
+        const data = await api.getRecords();
+        if (data.records && data.records.length > 0) {
+          const latestRecord = data.records[0];
+          const result = await api.loadGame(latestRecord.id);
+          setSessionId(result.sessionId);
+          setCaravan(result.caravan);
+          setCurrentCity(result.currentCity);
+          setCurrentPrices(result.currentPrices);
+          setConnectedCities(result.connectedCities);
+          setAllGoods(result.allGoods);
+          setWeight(result.weight);
+          setGameStarted(true);
+          setActiveEvent(result.pendingEvent || null);
+          showMessage(`已自动加载最近存档：${latestRecord.caravanName}`, 'success');
+        }
+      } catch (err) {
+        console.error('自动加载存档失败:', err);
+      } finally {
+        setCheckingRecord(false);
+      }
+    };
+
+    loadLatestRecordIfExists();
+  }, [user, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = useCallback((text, type = 'success') => {
     setMessage({ text, type });
@@ -60,8 +103,17 @@ function GameApp() {
     setAllGoods(gameData.allGoods);
     setWeight(gameData.weight);
     setGameStarted(true);
+    setShowNewGame(false);
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
   }, [showMessage]);
+
+  const handleNewGame = useCallback(() => {
+    setShowNewGame(true);
+  }, []);
+
+  const handleCancelNewGame = useCallback(() => {
+    setShowNewGame(false);
+  }, []);
 
   const handleLoadRecord = useCallback(async (recordId) => {
     try {
@@ -227,11 +279,21 @@ function GameApp() {
     return <AuthPage />;
   }
 
-  if (view === 'admin') {
-    return <AdminPanel onBack={() => setView('game')} />;
+  if (isAdmin) {
+    return <AdminPanel onBack={handleLogout} />;
   }
 
   if (!gameStarted) {
+    if (checkingRecord) {
+      return (
+        <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <div style={{ textAlign: 'center', color: '#fff', fontSize: '1.2rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏳</div>
+            正在加载最近存档...
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="app">
         <header className="app-header">
@@ -242,17 +304,14 @@ function GameApp() {
           <div className="user-nav">
             <span>👤 {user.username}</span>
             <button onClick={() => setShowRecords(true)}>📜 记录</button>
-            {isAdmin && (
-              <button onClick={() => setView('admin')}>🎛️ 管理</button>
-            )}
             <button onClick={handleLogout}>退出</button>
           </div>
         </header>
-        <StartScreen onGameStart={handleGameStart} onLoadLatest={handleGameStart} />
+        <StartScreen onGameStart={handleGameStart} />
         {showRecords && (
           <RecordsModal
             onClose={() => setShowRecords(false)}
-            onLoadRecord={handleLoadRecord}
+            onLoadRecord={(recordId) => { handleLoadRecord(recordId); }}
           />
         )}
       </div>
@@ -272,11 +331,9 @@ function GameApp() {
         </div>
         <div className="user-nav">
           <span>👤 {user.username}</span>
-          <button onClick={handleSaveGame}>💾 保存</button>
+          <button onClick={handleNewGame}>🌟 新建游戏</button>
+          <button onClick={handleSaveGame}>� 保存</button>
           <button onClick={() => setShowRecords(true)}>📜 记录</button>
-          {isAdmin && (
-            <button onClick={() => setView('admin')}>🎛️ 管理</button>
-          )}
           <button onClick={handleLogout}>退出</button>
         </div>
       </header>
@@ -380,6 +437,21 @@ function GameApp() {
           onClose={() => setShowRecords(false)}
           onLoadRecord={handleLoadRecord}
         />
+      )}
+
+      {showNewGame && (
+        <div className="modal-overlay" onClick={handleCancelNewGame}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🌟 新建游戏</h3>
+              <button className="modal-close" onClick={handleCancelNewGame}>×</button>
+            </div>
+            <p style={{ color: '#e94560', marginBottom: '1rem', fontSize: '0.9rem' }}>
+              ⚠️ 注意：新建游戏将覆盖当前未保存的进度，但不会影响已保存的存档
+            </p>
+            <StartScreen onGameStart={handleGameStart} embedded />
+          </div>
+        </div>
       )}
 
       {loading && (

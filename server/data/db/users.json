@@ -22,5 +22,13 @@
     "role": "user",
     "createdAt": 1781837136945,
     "updatedAt": 1781837136945
+  },
+  {
+    "id": "4b7a5df8-d613-462b-8ddb-8132832aaaae",
+    "username": "testuser2",
+    "password": "$2b$10$YbJ3QpJUga8/FxQZbqVKuOJ6CSmU/PWe9eVXpPjbuZuvK0Za837e6",
+    "role": "user",
+    "createdAt": 1781850276667,
+    "updatedAt": 1781850276667
   }
 ]

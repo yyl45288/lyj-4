@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 
-function StartScreen({ onGameStart, onLoadLatest }) {
+function StartScreen({ onGameStart, embedded = false }) {
   const [cities, setCities] = useState([]);
   const [caravanName, setCaravanName] = useState('');
   const [leaderName, setLeaderName] = useState('');
   const [startCityId, setStartCityId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [latestRecord, setLatestRecord] = useState(null);
-  const [loadingRecord, setLoadingRecord] = useState(true);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -20,22 +18,7 @@ function StartScreen({ onGameStart, onLoadLatest }) {
     }).catch(err => {
       setError('加载城市数据失败: ' + err.message);
     });
-
-    loadLatestRecord();
   }, []);
-
-  const loadLatestRecord = async () => {
-    try {
-      const data = await api.getRecords();
-      if (data.records && data.records.length > 0) {
-        setLatestRecord(data.records[0]);
-      }
-    } catch (err) {
-      console.error('加载最新记录失败:', err);
-    } finally {
-      setLoadingRecord(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,115 +40,84 @@ function StartScreen({ onGameStart, onLoadLatest }) {
     }
   };
 
-  const handleContinue = async () => {
-    if (!latestRecord) return;
-    setLoading(true);
-    try {
-      const gameData = await api.loadGame(latestRecord.id);
-      onLoadLatest(gameData);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (timestamp) => {
-    return new Date(timestamp).toLocaleString('zh-CN');
-  };
-
-  return (
-    <div className="start-screen">
-      {latestRecord && !loadingRecord && (
-        <div className="create-caravan-card" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '1rem' }}>📂 继续上次游戏</h3>
-          <div className="record-card" style={{ cursor: 'pointer', marginBottom: '1rem' }} onClick={handleContinue}>
-            <div className="record-card-header">
-              <span className="record-caravan-name">{latestRecord.caravanName}</span>
-              <span style={{ fontSize: '0.8rem', color: '#e94560', fontWeight: '600' }}>最新</span>
-            </div>
-            <div className="record-stats">
-              <span>领袖: <strong>{latestRecord.leaderName}</strong></span>
-              <span>金币: <strong>{latestRecord.money?.toLocaleString()}</strong></span>
-              <span>旅行次数: <strong>{latestRecord.travelCount}</strong></span>
-            </div>
-            <div className="record-date">
-              更新于: {formatDate(latestRecord.updatedAt)}
-            </div>
-          </div>
-          <button
-            className="btn btn-primary"
-            style={{ width: '100%' }}
-            onClick={handleContinue}
-            disabled={loading}
-          >
-            {loading ? '加载中...' : '🚀 继续游戏'}
-          </button>
-        </div>
+  const content = (
+    <div>
+      {!embedded && (
+        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>🏜️ 创建你的商队</h2>
       )}
-
-      <div className="create-caravan-card">
-        <h2>🏜️ 创建你的商队</h2>
+      {!embedded && (
         <p style={{ textAlign: 'center', color: '#a0a0a0', marginBottom: '1.5rem' }}>
           在末日废土中开启你的贸易帝国
         </p>
+      )}
 
-        {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>商队名称</label>
-            <input
-              type="text"
-              placeholder="例如：沙暴商队"
-              value={caravanName}
-              onChange={(e) => setCaravanName(e.target.value)}
-              maxLength={20}
-            />
-          </div>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label>商队名称</label>
+          <input
+            type="text"
+            placeholder="例如：沙暴商队"
+            value={caravanName}
+            onChange={(e) => setCaravanName(e.target.value)}
+            maxLength={20}
+          />
+        </div>
 
-          <div className="form-group">
-            <label>领袖姓名</label>
-            <input
-              type="text"
-              placeholder="你的名字"
-              value={leaderName}
-              onChange={(e) => setLeaderName(e.target.value)}
-              maxLength={20}
-            />
-          </div>
+        <div className="form-group">
+          <label>领袖姓名</label>
+          <input
+            type="text"
+            placeholder="你的名字"
+            value={leaderName}
+            onChange={(e) => setLeaderName(e.target.value)}
+            maxLength={20}
+          />
+        </div>
 
-          <div className="form-group">
-            <label>起始城市</label>
-            <select
-              value={startCityId}
-              onChange={(e) => setStartCityId(e.target.value)}
-            >
-              {cities.map(city => (
-                <option key={city.id} value={city.id}>
-                  {city.name} - {city.description}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(15, 52, 96, 0.3)', borderRadius: '8px', fontSize: '0.85rem', color: '#a0a0a0' }}>
-            <p style={{ marginBottom: '0.5rem', color: '#e8e8e8', fontWeight: '600' }}>🎒 初始物资：</p>
-            <p>• 1000 金币</p>
-            <p>• 净水 x5, 干粮 x5</p>
-            <p>• 药品 x2, 武器 x1, 废料 x2</p>
-            <p>• 最大负重：100 kg</p>
-          </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ marginTop: '1.5rem' }}
-            disabled={loading}
+        <div className="form-group">
+          <label>起始城市</label>
+          <select
+            value={startCityId}
+            onChange={(e) => setStartCityId(e.target.value)}
           >
-            {loading ? '创建中...' : '🚀 开启废土之旅'}
-          </button>
-        </form>
+            {cities.map(city => (
+              <option key={city.id} value={city.id}>
+                {city.name} - {city.description}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(15, 52, 96, 0.3)', borderRadius: '8px', fontSize: '0.85rem', color: '#a0a0a0' }}>
+          <p style={{ marginBottom: '0.5rem', color: '#e8e8e8', fontWeight: '600' }}>🎒 初始物资：</p>
+          <p>• 1000 金币</p>
+          <p>• 净水 x5, 干粮 x5</p>
+          <p>• 药品 x2, 武器 x1, 废料 x2</p>
+          <p>• 最大负重：100 kg</p>
+        </div>
+
+        <button
+          type="submit"
+          className="btn btn-primary"
+          style={{ marginTop: '1.5rem', width: embedded ? '100%' : undefined }}
+          disabled={loading}
+        >
+          {loading ? '创建中...' : (embedded ? '🚀 创建新商队' : '🚀 开启废土之旅')}
+        </button>
+      </form>
+    </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <div className="start-screen">
+      <div className="create-caravan-card">
+        {content}
       </div>
     </div>
   );

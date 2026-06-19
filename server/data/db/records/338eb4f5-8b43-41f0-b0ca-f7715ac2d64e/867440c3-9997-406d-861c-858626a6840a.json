@@ -4,14 +4,14 @@
     "id": "e7cfbd3c-7d1f-45f2-bb9d-9d76efa7cc1b",
     "name": "测试商队",
     "leader": "测试玩家",
-    "money": 895,
+    "money": 845,
     "maxCarryWeight": 100,
     "stamina": 100,
     "maxStamina": 100,
     "currentCityId": "city-1",
     "inventory": {
-      "water": 3,
-      "food": 3,
+      "water": 0,
+      "food": 0,
       "medicine": 2,
       "weapons": 1,
       "scrap": 2
@@ -60,7 +60,7 @@
     "reputation": 50
   },
   "createdAt": 1781837176407,
-  "updatedAt": 1781838101428,
+  "updatedAt": 1781850441981,
   "pendingEvent": null,
   "cityInventories": {
     "city-1": {
