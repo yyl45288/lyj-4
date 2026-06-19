@@ -6,6 +6,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const GOODS_FILE = path.join(DATA_DIR, 'goods.json');
 const CITIES_FILE = path.join(DATA_DIR, 'cities.json');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
+const MERCENARIES_FILE = path.join(DATA_DIR, 'mercenaries.json');
 const RECORDS_DIR = path.join(DATA_DIR, 'records');
 
 function initDataDir() {
@@ -98,6 +99,14 @@ function saveEvents(events) {
   return writeJSON(EVENTS_FILE, events);
 }
 
+function getMercenaries() {
+  return readJSON(MERCENARIES_FILE, null);
+}
+
+function saveMercenaries(mercenariesData) {
+  return writeJSON(MERCENARIES_FILE, mercenariesData);
+}
+
 function saveGameRecord(userId, recordId, record) {
   const userDir = path.join(RECORDS_DIR, userId);
   if (!fs.existsSync(userDir)) {
@@ -172,6 +181,8 @@ module.exports = {
   saveCities,
   getEvents,
   saveEvents,
+  getMercenaries,
+  saveMercenaries,
   saveGameRecord,
   getGameRecord,
   getUserGameRecords,

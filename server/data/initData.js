@@ -2,6 +2,7 @@ const store = require('./store');
 const { goods: defaultGoods } = require('./goods');
 const { cities: defaultCities, connections: defaultConnections } = require('./cities');
 const { events: defaultEvents } = require('./events');
+const { mercenaries: defaultMercenaries, cityMercenaryAvailability } = require('./mercenaries');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { ADMIN_USERNAME } = require('../middleware/auth');
@@ -27,6 +28,17 @@ function initEvents() {
   if (!existing || existing.length === 0) {
     store.saveEvents(defaultEvents);
     console.log('已初始化事件数据');
+  }
+}
+
+function initMercenaries() {
+  const existing = store.getMercenaries();
+  if (!existing || !existing.mercenaries || existing.mercenaries.length === 0) {
+    store.saveMercenaries({ 
+      mercenaries: defaultMercenaries, 
+      cityAvailability: cityMercenaryAvailability 
+    });
+    console.log('已初始化佣兵数据');
   }
 }
 
@@ -65,11 +77,26 @@ function getEventsData() {
   return stored || defaultEvents;
 }
 
+function getMercenariesData() {
+  const stored = store.getMercenaries();
+  if (stored && stored.mercenaries) {
+    return {
+      mercenaries: stored.mercenaries,
+      cityAvailability: stored.cityAvailability || cityMercenaryAvailability
+    };
+  }
+  return {
+    mercenaries: defaultMercenaries,
+    cityAvailability: cityMercenaryAvailability
+  };
+}
+
 function initAllData() {
   store.initDataDir();
   initGoods();
   initCities();
   initEvents();
+  initMercenaries();
   initAdminUser();
   console.log('数据初始化完成');
 }
@@ -78,5 +105,6 @@ module.exports = {
   initAllData,
   getGoodsData,
   getCitiesData,
-  getEventsData
+  getEventsData,
+  getMercenariesData
 };

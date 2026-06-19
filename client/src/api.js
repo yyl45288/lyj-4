@@ -49,6 +49,8 @@ export const api = {
   getGoods: () => apiCall('/api/goods'),
   getEvents: () => apiCall('/api/events'),
 
+  getMercenaries: () => apiCall('/api/mercenaries'),
+
   createGame: (caravanName, leaderName, startCityId) =>
     apiCall('/api/game/create', 'POST', { caravanName, leaderName, startCityId }, true),
 
@@ -66,6 +68,24 @@ export const api = {
 
   sellGoods: (sessionId, goodId, amount) =>
     apiCall('/api/trade/sell', 'POST', { sessionId, goodId, amount }, true),
+
+  getBlackMarketPrices: (sessionId) =>
+    apiCall('/api/blackmarket/prices', 'POST', { sessionId }, true),
+
+  buyBlackMarket: (sessionId, goodId, amount) =>
+    apiCall('/api/blackmarket/buy', 'POST', { sessionId, goodId, amount }, true),
+
+  sellBlackMarket: (sessionId, goodId, amount) =>
+    apiCall('/api/blackmarket/sell', 'POST', { sessionId, goodId, amount }, true),
+
+  getAvailableMercenaries: (sessionId) =>
+    apiCall('/api/mercenaries/available', 'POST', { sessionId }, true),
+
+  hireMercenary: (sessionId, mercenaryId) =>
+    apiCall('/api/mercenaries/hire', 'POST', { sessionId, mercenaryId }, true),
+
+  fireMercenary: (sessionId, mercenaryId) =>
+    apiCall('/api/mercenaries/fire', 'POST', { sessionId, mercenaryId }, true),
 
   startTravel: (sessionId, toCityId) =>
     apiCall('/api/travel/start', 'POST', { sessionId, toCityId }, true),

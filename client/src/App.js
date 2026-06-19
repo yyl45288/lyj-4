@@ -4,6 +4,8 @@ import { api } from './api';
 import StartScreen from './components/StartScreen';
 import GameMap from './components/GameMap';
 import TradePanel from './components/TradePanel';
+import BlackMarketPanel from './components/BlackMarketPanel';
+import MercenaryPanel from './components/MercenaryPanel';
 import Inventory from './components/Inventory';
 import MoneyChart from './components/MoneyChart';
 import TradeLog from './components/TradeLog';
@@ -28,12 +30,20 @@ function GameApp() {
   const [weight, setWeight] = useState(0);
   const [selectedDestination, setSelectedDestination] = useState(null);
   const [message, setMessage] = useState(null);
+  const [tradeMessage, setTradeMessage] = useState(null);
+  const [blackMarketMessage, setBlackMarketMessage] = useState(null);
+  const [mercenaryMessage, setMercenaryMessage] = useState(null);
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeEventResult, setActiveEventResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showRecords, setShowRecords] = useState(false);
   const [showNewGame, setShowNewGame] = useState(false);
   const [checkingRecord, setCheckingRecord] = useState(true);
+  const [blackMarketPrices, setBlackMarketPrices] = useState({});
+  const [showBlackMarket, setShowBlackMarket] = useState(false);
+  const [showMercenary, setShowMercenary] = useState(false);
+  const [availableMercenaries, setAvailableMercenaries] = useState([]);
+  const [hiredMercenaries, setHiredMercenaries] = useState([]);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -75,6 +85,9 @@ function GameApp() {
           setConnectedCities(result.connectedCities);
           setAllGoods(result.allGoods);
           setWeight(result.weight);
+          setBlackMarketPrices(result.blackMarketPrices || {});
+          setAvailableMercenaries(result.availableMercenaries || []);
+          setHiredMercenaries(result.hiredMercenaries || []);
           setGameStarted(true);
           setActiveEvent(result.pendingEvent || null);
           showMessage(`已自动加载最近存档：${latestRecord.caravanName}`, 'success');
@@ -102,6 +115,9 @@ function GameApp() {
     setConnectedCities(gameData.connectedCities);
     setAllGoods(gameData.allGoods);
     setWeight(gameData.weight);
+    setBlackMarketPrices(gameData.blackMarketPrices || {});
+    setAvailableMercenaries(gameData.availableMercenaries || []);
+    setHiredMercenaries(gameData.hiredMercenaries || []);
     setGameStarted(true);
     setShowNewGame(false);
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
@@ -126,6 +142,9 @@ function GameApp() {
       setConnectedCities(result.connectedCities);
       setAllGoods(result.allGoods);
       setWeight(result.weight);
+      setBlackMarketPrices(result.blackMarketPrices || {});
+      setAvailableMercenaries(result.availableMercenaries || []);
+      setHiredMercenaries(result.hiredMercenaries || []);
       setGameStarted(true);
       setActiveEvent(result.pendingEvent || null);
       setShowRecords(false);
@@ -171,13 +190,126 @@ function GameApp() {
       setCaravan(result.caravan);
       setCurrentPrices(result.currentPrices);
       setWeight(result.weight);
-      showMessage(result.message, 'success');
+      setTradeMessage({ text: result.message, type: 'success' });
+      setTimeout(() => setTradeMessage(null), 3000);
     } catch (err) {
-      showMessage(err.message, 'error');
+      setTradeMessage({ text: err.message, type: 'error' });
+      setTimeout(() => setTradeMessage(null), 3000);
     } finally {
       setLoading(false);
     }
-  }, [sessionId, showMessage]);
+  }, [sessionId]);
+
+  const loadBlackMarketPrices = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      const result = await api.getBlackMarketPrices(sessionId);
+      setBlackMarketPrices(result.blackMarketPrices);
+    } catch (err) {
+      console.error('加载黑市价格失败:', err);
+    }
+  }, [sessionId]);
+
+  const handleBlackMarketBuy = useCallback(async (goodId, amount) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.buyBlackMarket(sessionId, goodId, amount);
+      setCaravan(result.caravan);
+      setBlackMarketPrices(result.blackMarketPrices);
+      setWeight(result.weight);
+      
+      let messageText = result.message;
+      if (result.blackMarketEvent) {
+        messageText += ` | ${result.blackMarketEvent.name}: ${result.blackMarketEvent.description}`;
+        if (result.blackMarketEvent.messages) {
+          messageText += ` | ${result.blackMarketEvent.messages.join(', ')}`;
+        }
+      }
+      
+      setBlackMarketMessage({ text: messageText, type: result.blackMarketEvent ? 'error' : 'success' });
+      setTimeout(() => setBlackMarketMessage(null), 5000);
+    } catch (err) {
+      setBlackMarketMessage({ text: err.message, type: 'error' });
+      setTimeout(() => setBlackMarketMessage(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
+
+  const handleBlackMarketSell = useCallback(async (goodId, amount) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.sellBlackMarket(sessionId, goodId, amount);
+      setCaravan(result.caravan);
+      setBlackMarketPrices(result.blackMarketPrices);
+      setWeight(result.weight);
+      
+      let messageText = result.message;
+      if (result.blackMarketEvent) {
+        messageText += ` | ${result.blackMarketEvent.name}: ${result.blackMarketEvent.description}`;
+        if (result.blackMarketEvent.messages) {
+          messageText += ` | ${result.blackMarketEvent.messages.join(', ')}`;
+        }
+      }
+      
+      setBlackMarketMessage({ text: messageText, type: result.blackMarketEvent ? 'error' : 'success' });
+      setTimeout(() => setBlackMarketMessage(null), 5000);
+    } catch (err) {
+      setBlackMarketMessage({ text: err.message, type: 'error' });
+      setTimeout(() => setBlackMarketMessage(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
+
+  const loadAvailableMercenaries = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      const result = await api.getAvailableMercenaries(sessionId);
+      setAvailableMercenaries(result.availableMercenaries);
+      setHiredMercenaries(result.hiredMercenaries || []);
+    } catch (err) {
+      console.error('加载可雇佣佣兵失败:', err);
+    }
+  }, [sessionId]);
+
+  const handleHireMercenary = useCallback(async (mercenaryId) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.hireMercenary(sessionId, mercenaryId);
+      setCaravan(result.caravan);
+      setAvailableMercenaries(result.availableMercenaries);
+      setHiredMercenaries(result.hiredMercenaries || []);
+      setMercenaryMessage({ text: result.message, type: 'success' });
+      setTimeout(() => setMercenaryMessage(null), 3000);
+    } catch (err) {
+      setMercenaryMessage({ text: err.message, type: 'error' });
+      setTimeout(() => setMercenaryMessage(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
+
+  const handleFireMercenary = useCallback(async (mercenaryId) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.fireMercenary(sessionId, mercenaryId);
+      setCaravan(result.caravan);
+      setAvailableMercenaries(result.availableMercenaries);
+      setHiredMercenaries(result.hiredMercenaries || []);
+      setMercenaryMessage({ text: result.message, type: 'success' });
+      setTimeout(() => setMercenaryMessage(null), 3000);
+    } catch (err) {
+      setMercenaryMessage({ text: err.message, type: 'error' });
+      setTimeout(() => setMercenaryMessage(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
 
   const handleTravel = useCallback(async () => {
     if (!sessionId || !selectedDestination) return;
@@ -186,6 +318,7 @@ function GameApp() {
       const result = await api.startTravel(sessionId, selectedDestination);
       setCaravan(result.caravan);
       setWeight(result.weight);
+      setHiredMercenaries(result.hiredMercenaries || []);
 
       if (result.eventOccurred && result.event) {
         setActiveEvent(result.event);
@@ -194,6 +327,8 @@ function GameApp() {
         setCurrentCity(result.currentCity);
         setCurrentPrices(result.currentPrices);
         setConnectedCities(result.connectedCities);
+        setBlackMarketPrices(result.blackMarketPrices || {});
+        setAvailableMercenaries(result.availableMercenaries || []);
         setSelectedDestination(null);
         showMessage(`安全抵达「${result.currentCity.name}」！市场价格已更新。`, 'success');
       }
@@ -214,6 +349,9 @@ function GameApp() {
       setCurrentPrices(result.currentPrices);
       setConnectedCities(result.connectedCities);
       setWeight(result.weight);
+      setBlackMarketPrices(result.blackMarketPrices || {});
+      setAvailableMercenaries(result.availableMercenaries || []);
+      setHiredMercenaries(result.hiredMercenaries || []);
       setActiveEvent(null);
       setActiveEventResult(null);
       setSelectedDestination(null);
@@ -239,7 +377,10 @@ function GameApp() {
       const result = await api.rest(sessionId);
       setCaravan(result.caravan);
       setCurrentPrices(result.currentPrices);
+      setBlackMarketPrices(result.blackMarketPrices || {});
       setWeight(result.weight);
+      setAvailableMercenaries(result.availableMercenaries || []);
+      setHiredMercenaries(result.hiredMercenaries || []);
       showMessage(result.message, 'success');
     } catch (err) {
       showMessage(err.message, 'error');
@@ -379,6 +520,18 @@ function GameApp() {
               {currentCity?.name || '旅途中...'}
             </div>
           </div>
+          <div className="stat-card">
+            <div className="label">⭐ 声望</div>
+            <div className="value" style={{ color: '#f1c40f' }}>
+              {caravan?.reputation || 0}
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="label">⚔️ 佣兵</div>
+            <div className="value" style={{ color: '#3498db' }}>
+              {caravan?.mercenaries?.length || 0} 人
+            </div>
+          </div>
         </div>
 
         <div className="game-layout">
@@ -413,14 +566,71 @@ function GameApp() {
               onRest={handleRest}
               caravan={caravan}
             />
-            <TradePanel
-              allGoods={allGoods}
-              currentPrices={currentPrices}
-              caravan={caravan}
-              onBuy={handleBuy}
-              onSell={handleSell}
-              message={message}
-            />
+            
+            <div className="panel-tabs">
+              <button
+                className={`panel-tab ${!showBlackMarket && !showMercenary ? 'active' : ''}`}
+                onClick={() => { setShowBlackMarket(false); setShowMercenary(false); }}
+              >
+                🏪 市场
+              </button>
+              {currentCity?.hasBlackMarket && (
+                <button
+                  className={`panel-tab ${showBlackMarket ? 'active' : ''}`}
+                  onClick={() => {
+                    setShowBlackMarket(true);
+                    setShowMercenary(false);
+                    loadBlackMarketPrices();
+                  }}
+                >
+                  🌑 黑市
+                </button>
+              )}
+              <button
+                className={`panel-tab ${showMercenary ? 'active' : ''}`}
+                onClick={() => {
+                  setShowMercenary(true);
+                  setShowBlackMarket(false);
+                  loadAvailableMercenaries();
+                }}
+              >
+                ⚔️ 佣兵
+              </button>
+            </div>
+
+            {!showBlackMarket && !showMercenary && (
+              <TradePanel
+                allGoods={allGoods}
+                currentPrices={currentPrices}
+                caravan={caravan}
+                onBuy={handleBuy}
+                onSell={handleSell}
+                message={tradeMessage}
+              />
+            )}
+
+            {showBlackMarket && currentCity?.hasBlackMarket && (
+              <BlackMarketPanel
+                allGoods={allGoods}
+                blackMarketPrices={blackMarketPrices}
+                caravan={caravan}
+                onBuy={handleBlackMarketBuy}
+                onSell={handleBlackMarketSell}
+                message={blackMarketMessage}
+                blackMarketRisk={currentCity?.blackMarketRisk}
+              />
+            )}
+
+            {showMercenary && (
+              <MercenaryPanel
+                availableMercenaries={availableMercenaries}
+                hiredMercenaries={hiredMercenaries}
+                caravan={caravan}
+                onHire={handleHireMercenary}
+                onFire={handleFireMercenary}
+                message={mercenaryMessage}
+              />
+            )}
           </div>
         </div>
       </div>

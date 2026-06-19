@@ -4,7 +4,7 @@
     "id": "38d3ce25-a7ac-4ac4-bc53-fb712800b3eb",
     "name": "111111",
     "leader": "111111",
-    "money": 162,
+    "money": 82,
     "maxCarryWeight": 100,
     "stamina": 73,
     "maxStamina": 100,
@@ -414,6 +414,23 @@
         "cityId": "city-2",
         "cityName": "绿洲镇",
         "time": 1781856131227
+      },
+      {
+        "id": "746df6e5-9c03-4d33-b5d3-872a5b9654f0",
+        "type": "mercenary_hire",
+        "mercenaryId": "merc-1",
+        "mercenaryName": "老兵杰克",
+        "wage": 80,
+        "cityId": "city-2",
+        "time": 1781863081213
+      },
+      {
+        "id": "445ad670-62af-4b6a-8a85-90fb2ffea597",
+        "type": "mercenary_fire",
+        "mercenaryId": "merc-1",
+        "mercenaryName": "老兵杰克",
+        "cityId": "city-2",
+        "time": 1781870485470
       }
     ],
     "moneyHistory": [
@@ -552,13 +569,18 @@
       {
         "time": 33,
         "money": 162
+      },
+      {
+        "time": 34,
+        "money": 82
       }
     ],
     "travelCount": 1,
-    "reputation": 50
+    "reputation": 50,
+    "mercenaries": []
   },
   "createdAt": 1781800873851,
-  "updatedAt": 1781856131227,
+  "updatedAt": 1781870485470,
   "pendingEvent": null,
   "cityInventories": {
     "city-1": {

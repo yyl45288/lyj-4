@@ -5,6 +5,8 @@ const cities = [
     description: '建立在旧世界军事基地废墟上的要塞城市，以军火和钢铁交易闻名。',
     x: 150,
     y: 200,
+    hasBlackMarket: true,
+    blackMarketRisk: 0.15,
     baseDemand: {
       'water': 1.4,
       'food': 1.1,
@@ -14,7 +16,12 @@ const cities = [
       'steel': 0.6,
       'scrap': 0.5,
       'drugs': 1.3,
-      'clothes': 1.0
+      'clothes': 1.0,
+      'rare-alloys': 1.2,
+      'nuclear-cores': 0.8,
+      'cyber-implants': 1.1,
+      'artifacts': 0.9,
+      'stims': 1.3
     },
     baseSupply: {
       'water': 0.8,
@@ -25,7 +32,12 @@ const cities = [
       'steel': 1.4,
       'scrap': 1.3,
       'drugs': 0.9,
-      'clothes': 1.0
+      'clothes': 1.0,
+      'rare-alloys': 0.7,
+      'nuclear-cores': 0.5,
+      'cyber-implants': 0.8,
+      'artifacts': 0.6,
+      'stims': 0.9
     }
   },
   {
@@ -34,6 +46,8 @@ const cities = [
     description: '废土中罕见的拥有地下水源的城镇，农业发达，是主要的食物和水源产地。',
     x: 400,
     y: 120,
+    hasBlackMarket: false,
+    blackMarketRisk: 0,
     baseDemand: {
       'water': 0.6,
       'food': 0.5,
@@ -43,7 +57,12 @@ const cities = [
       'steel': 1.2,
       'scrap': 1.1,
       'drugs': 1.0,
-      'clothes': 1.1
+      'clothes': 1.1,
+      'rare-alloys': 0.8,
+      'nuclear-cores': 0.6,
+      'cyber-implants': 0.7,
+      'artifacts': 1.0,
+      'stims': 0.9
     },
     baseSupply: {
       'water': 1.6,
@@ -54,7 +73,12 @@ const cities = [
       'steel': 0.8,
       'scrap': 0.9,
       'drugs': 1.0,
-      'clothes': 1.0
+      'clothes': 1.0,
+      'rare-alloys': 0.5,
+      'nuclear-cores': 0.3,
+      'cyber-implants': 0.4,
+      'artifacts': 0.8,
+      'stims': 0.7
     }
   },
   {
@@ -63,6 +87,8 @@ const cities = [
     description: '建立在旧港口废墟上的贸易枢纽，各种废旧物资堆积如山，是拾荒者的天堂。',
     x: 650,
     y: 250,
+    hasBlackMarket: true,
+    blackMarketRisk: 0.2,
     baseDemand: {
       'water': 1.2,
       'food': 1.3,
@@ -72,7 +98,12 @@ const cities = [
       'steel': 1.3,
       'scrap': 0.5,
       'drugs': 1.2,
-      'clothes': 0.9
+      'clothes': 0.9,
+      'rare-alloys': 1.4,
+      'nuclear-cores': 1.0,
+      'cyber-implants': 1.2,
+      'artifacts': 1.3,
+      'stims': 1.1
     },
     baseSupply: {
       'water': 0.9,
@@ -83,7 +114,12 @@ const cities = [
       'steel': 0.7,
       'scrap': 1.7,
       'drugs': 1.1,
-      'clothes': 1.2
+      'clothes': 1.2,
+      'rare-alloys': 1.2,
+      'nuclear-cores': 0.8,
+      'cyber-implants': 1.0,
+      'artifacts': 1.4,
+      'stims': 1.0
     }
   },
   {
@@ -92,6 +128,8 @@ const cities = [
     description: '位于核辐射边缘的危险城市，这里盛产黑市药品和稀有物资，但健康风险极高。',
     x: 300,
     y: 380,
+    hasBlackMarket: true,
+    blackMarketRisk: 0.25,
     baseDemand: {
       'water': 1.3,
       'food': 1.2,
@@ -101,7 +139,12 @@ const cities = [
       'steel': 1.0,
       'scrap': 1.0,
       'drugs': 0.6,
-      'clothes': 1.3
+      'clothes': 1.3,
+      'rare-alloys': 0.9,
+      'nuclear-cores': 1.5,
+      'cyber-implants': 0.8,
+      'artifacts': 0.7,
+      'stims': 0.7
     },
     baseSupply: {
       'water': 0.7,
@@ -112,7 +155,12 @@ const cities = [
       'steel': 1.0,
       'scrap': 1.1,
       'drugs': 1.6,
-      'clothes': 0.8
+      'clothes': 0.8,
+      'rare-alloys': 1.3,
+      'nuclear-cores': 1.8,
+      'cyber-implants': 1.1,
+      'artifacts': 1.2,
+      'stims': 1.5
     }
   },
   {
@@ -121,6 +169,8 @@ const cities = [
     description: '沙漠中的流动集市，沙漠游牧民的聚集地，以纺织品和药材交易著称。',
     x: 550,
     y: 420,
+    hasBlackMarket: false,
+    blackMarketRisk: 0,
     baseDemand: {
       'water': 1.5,
       'food': 1.0,
@@ -130,7 +180,12 @@ const cities = [
       'steel': 1.1,
       'scrap': 1.2,
       'drugs': 1.1,
-      'clothes': 0.7
+      'clothes': 0.7,
+      'rare-alloys': 1.0,
+      'nuclear-cores': 0.7,
+      'cyber-implants': 0.9,
+      'artifacts': 1.1,
+      'stims': 1.0
     },
     baseSupply: {
       'water': 0.5,
@@ -141,7 +196,12 @@ const cities = [
       'steel': 0.9,
       'scrap': 0.8,
       'drugs': 1.0,
-      'clothes': 1.5
+      'clothes': 1.5,
+      'rare-alloys': 0.6,
+      'nuclear-cores': 0.4,
+      'cyber-implants': 0.7,
+      'artifacts': 1.0,
+      'stims': 0.8
     }
   }
 ];

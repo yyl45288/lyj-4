@@ -13,45 +13,58 @@ function EventModal({ event, eventResult, onResolve, caravan }) {
   };
 
   const typeInfo = getEventTypeLabel(event.type);
-  const requiresChoice = event.needsResolution || event.id === 'friendly-travelers' || event.id === 'merchant';
+  const hasChoices = event.hasChoices && event.choices && event.choices.length > 0;
+
+  const isChoiceDisabled = (choice) => {
+    if (!choice.requirements) return false;
+    
+    if (choice.requirements.minMoney && caravan.money < choice.requirements.minMoney) {
+      return true;
+    }
+    if (choice.requirements.minReputation && caravan.reputation < choice.requirements.minReputation) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const getDisabledReason = (choice) => {
+    if (!choice.requirements) return '';
+    if (choice.requirements.minMoney && caravan.money < choice.requirements.minMoney) {
+      return `需要 ${choice.requirements.minMoney} 金币`;
+    }
+    if (choice.requirements.minReputation && caravan.reputation < choice.requirements.minReputation) {
+      return `需要 ${choice.requirements.minReputation} 声望`;
+    }
+    return '';
+  };
 
   const renderChoiceButtons = () => {
-    if (event.id === 'friendly-travelers') {
+    if (hasChoices) {
       return (
-        <div className="event-actions">
-          <button className="btn btn-success" onClick={() => onResolve('accept')}>
-            🤝 接受帮助
-          </button>
-          <button className="btn btn-secondary" onClick={() => onResolve('decline')}>
-            👋 礼貌谢绝
-          </button>
-        </div>
-      );
-    }
-
-    if (event.id === 'merchant') {
-      return (
-        <div className="event-actions">
-          <button
-            className="btn btn-warning"
-            onClick={() => onResolve('trade')}
-            disabled={caravan.money < 300}
-          >
-            💰 交易 (300金币)
-          </button>
-          <button className="btn btn-secondary" onClick={() => onResolve('decline')}>
-            ❌ 拒绝
-          </button>
-        </div>
-      );
-    }
-
-    if (event.id === 'hidden-cache' || event.id === 'water-source') {
-      return (
-        <div className="event-actions">
-          <button className="btn btn-success" onClick={() => onResolve('take')}>
-            ✅ 继续前进
-          </button>
+        <div className="event-choices">
+          {event.choices.map(choice => {
+            const disabled = isChoiceDisabled(choice);
+            const reason = getDisabledReason(choice);
+            
+            return (
+              <div key={choice.id} className="event-choice-item">
+                <button
+                  className={`btn btn-choice ${choice.id === 'fight' ? 'btn-danger' : choice.id === 'pay' ? 'btn-warning' : 'btn-secondary'}`}
+                  onClick={() => onResolve(choice.id)}
+                  disabled={disabled}
+                >
+                  {choice.label}
+                </button>
+                {disabled && reason && (
+                  <span className="choice-disabled-reason">{reason}</span>
+                )}
+                {choice.description && (
+                  <p className="choice-description">{choice.description}</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       );
     }
@@ -76,6 +89,7 @@ function EventModal({ event, eventResult, onResolve, caravan }) {
 
         {eventResult && eventResult.length > 0 && (
           <div className="event-results">
+            <h4>结果:</h4>
             <ul>
               {eventResult.map((msg, idx) => (
                 <li key={idx}>• {msg}</li>
@@ -84,18 +98,13 @@ function EventModal({ event, eventResult, onResolve, caravan }) {
           </div>
         )}
 
-        {event.id === 'merchant' && (
-          <div style={{ textAlign: 'center', color: '#a0a0a0', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            神秘商人提供一笔特殊交易（300金币购买5单位稀有物资）
+        {hasChoices && !eventResult ? (
+          <div className="event-choices-section">
+            <h4 style={{ marginBottom: '0.75rem' }}>你的选择:</h4>
+            {renderChoiceButtons()}
           </div>
-        )}
-
-        {requiresChoice ? renderChoiceButtons() : (
-          <div className="event-actions">
-            <button className="btn btn-primary" onClick={() => onResolve('continue')}>
-              继续旅程
-            </button>
-          </div>
+        ) : (
+          renderChoiceButtons()
         )}
       </div>
     </div>

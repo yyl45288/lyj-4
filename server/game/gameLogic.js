@@ -1,7 +1,7 @@
-function calculateCityPrices(cityId, cityInventory, city, goods, priceCache) {
+function calculateCityPrices(cityId, cityInventory, city, goods, priceCache, isBlackMarket = false) {
   if (!city) return {};
 
-  if (priceCache && priceCache[cityId]) {
+  if (priceCache && priceCache[cityId] && !isBlackMarket) {
     const cachedPrices = {};
     goods.forEach(good => {
       if (priceCache[cityId][good.id]) {
@@ -19,24 +19,144 @@ function calculateCityPrices(cityId, cityInventory, city, goods, priceCache) {
 
   const prices = {};
   goods.forEach(good => {
+    if (!isBlackMarket && good.blackMarketOnly) {
+      return;
+    }
+
     const basePrice = good.basePrice;
     const demand = city.baseDemand[good.id] || 1;
     const supply = city.baseSupply[good.id] || 1;
     const inventory = cityInventory[good.id] || 0;
     const inventoryFactor = Math.max(0.5, Math.min(1.5, 1 - (inventory / 100) * 0.5));
     const demandSupplyRatio = demand / supply;
-    const randomFactor = 0.9 + Math.random() * 0.2;
-    const finalPrice = Math.round(basePrice * demandSupplyRatio * inventoryFactor * randomFactor);
+    
+    const randomRange = isBlackMarket ? 0.4 : 0.2;
+    const randomFactor = (1 - randomRange / 2) + Math.random() * randomRange;
+    
+    let finalPrice = Math.round(basePrice * demandSupplyRatio * inventoryFactor * randomFactor);
+    
+    if (isBlackMarket) {
+      const priceMultiplier = good.blackMarketOnly ? 1.3 : 1.1;
+      finalPrice = Math.round(finalPrice * priceMultiplier);
+    }
+
     prices[good.id] = {
-      buyPrice: Math.round(finalPrice * 1.1),
-      sellPrice: Math.round(finalPrice * 0.9),
+      buyPrice: Math.round(finalPrice * (isBlackMarket ? 1.05 : 1.1)),
+      sellPrice: Math.round(finalPrice * (isBlackMarket ? 0.95 : 0.9)),
       stock: Math.max(0, inventory),
       demand: demand > 1.2 ? '高' : demand < 0.8 ? '低' : '中',
-      supply: supply > 1.2 ? '充足' : supply < 0.8 ? '稀缺' : '正常'
+      supply: supply > 1.2 ? '充足' : supply < 0.8 ? '稀缺' : '正常',
+      isIllegal: good.isIllegal || false,
+      blackMarketOnly: good.blackMarketOnly || false
     };
   });
 
   return prices;
+}
+
+function calculateBlackMarketRisk(city, goodsBought) {
+  const baseRisk = city.blackMarketRisk || 0.15;
+  let riskMultiplier = 1;
+  
+  let illegalValue = 0;
+  Object.entries(goodsBought).forEach(([goodId, amount]) => {
+    if (amount > 0) {
+      illegalValue += amount;
+    }
+  });
+  
+  riskMultiplier += illegalValue * 0.02;
+  
+  return Math.min(0.8, baseRisk * riskMultiplier);
+}
+
+function rollBlackMarketEvent(city, goodsBought, caravan) {
+  const risk = calculateBlackMarketRisk(city, goodsBought);
+  
+  if (Math.random() > risk) {
+    return null;
+  }
+  
+  const eventTypes = [
+    { id: 'police-raid', name: '执法突袭', weight: 2, type: 'danger' },
+    { id: 'robbery', name: '黑市抢劫', weight: 3, type: 'danger' },
+    { id: 'informant', name: '告密者', weight: 1, type: 'danger' }
+  ];
+  
+  const totalWeight = eventTypes.reduce((sum, e) => sum + e.weight, 0);
+  let random = Math.random() * totalWeight;
+  let selectedEvent = eventTypes[0];
+  
+  for (const event of eventTypes) {
+    random -= event.weight;
+    if (random <= 0) {
+      selectedEvent = event;
+      break;
+    }
+  }
+  
+  const result = {
+    event: selectedEvent,
+    messages: [],
+    moneyLoss: 0,
+    goodsLoss: {},
+    staminaLoss: 0
+  };
+  
+  const illegalGoods = Object.entries(goodsBought).filter(([id, amt]) => amt > 0);
+  
+  switch (selectedEvent.id) {
+    case 'police-raid':
+      result.messages.push('执法人员突袭了黑市！');
+      
+      const confiscationRate = 0.3 + Math.random() * 0.4;
+      illegalGoods.forEach(([goodId, amount]) => {
+        const lost = Math.floor(amount * confiscationRate);
+        if (lost > 0) {
+          result.goodsLoss[goodId] = lost;
+          result.messages.push(`${goodId} 被没收了 ${lost} 单位`);
+        }
+      });
+      
+      const fine = Math.floor(caravan.money * (0.1 + Math.random() * 0.15));
+      result.moneyLoss = fine;
+      result.messages.push(`被罚款 ${fine} 金币`);
+      result.staminaLoss = 15;
+      break;
+      
+    case 'robbery':
+      result.messages.push('一群劫匪盯上了你的黑市货物！');
+      
+      const robberyRate = 0.2 + Math.random() * 0.3;
+      illegalGoods.forEach(([goodId, amount]) => {
+        const lost = Math.floor(amount * robberyRate);
+        if (lost > 0) {
+          result.goodsLoss[goodId] = lost;
+          result.messages.push(`${goodId} 被抢走了 ${lost} 单位`);
+        }
+      });
+      
+      result.staminaLoss = 20;
+      break;
+      
+    case 'informant':
+      result.messages.push('有人向当局告密了你的交易！');
+      
+      const infoConfiscation = 0.15 + Math.random() * 0.2;
+      illegalGoods.forEach(([goodId, amount]) => {
+        const lost = Math.floor(amount * infoConfiscation);
+        if (lost > 0) {
+          result.goodsLoss[goodId] = lost;
+          result.messages.push(`${goodId} 被收缴了 ${lost} 单位`);
+        }
+      });
+      
+      result.moneyLoss = Math.floor(caravan.money * 0.05);
+      result.staminaLoss = 10;
+      break;
+  }
+  
+  return result;
 }
 
 function calculateTravelCost(fromCityId, toCityId, connections) {
@@ -121,30 +241,70 @@ function rollRandomEvent(dangerLevel, events) {
   return availableEvents[0];
 }
 
-function applyEventEffect(event, caravan, goods) {
+function applyEventEffect(event, choiceId, caravan, goods, mercenaries = []) {
   const result = {
     event: event,
+    choice: choiceId,
     messages: [],
     caravanUpdates: {
       money: caravan.money,
       inventory: { ...caravan.inventory },
-      stamina: caravan.stamina
+      stamina: caravan.stamina,
+      reputation: caravan.reputation || 50
     }
   };
 
-  event.effects.forEach(effect => {
-    if (Math.random() > effect.chance) return;
+  let effects = [];
+  if (event.hasChoices && event.choices) {
+    const choice = event.choices.find(c => c.id === choiceId);
+    if (choice) {
+      effects = choice.effects || [];
+      
+      if (choice.rewardReputation) {
+        result.caravanUpdates.reputation = Math.max(0, Math.min(100, 
+          result.caravanUpdates.reputation + choice.rewardReputation
+        ));
+        if (choice.rewardReputation > 0) {
+          result.messages.push(`声望提升了 ${choice.rewardReputation} 点`);
+        } else if (choice.rewardReputation < 0) {
+          result.messages.push(`声望下降了 ${Math.abs(choice.rewardReputation)} 点`);
+        }
+      }
+    }
+  } else {
+    effects = event.effects || [];
+  }
+
+  let totalRiskReduction = 0;
+  let totalLossReduction = 0;
+  mercenaries.forEach(merc => {
+    totalRiskReduction += merc.riskReduction || 0;
+    totalLossReduction += merc.lossReduction || 0;
+  });
+  totalRiskReduction = Math.min(0.7, totalRiskReduction);
+  totalLossReduction = Math.min(0.6, totalLossReduction);
+
+  effects.forEach(effect => {
+    let effectChance = effect.chance;
+    
+    if (effect.type === 'loseGoods' || effect.type === 'loseMoney' || effect.type === 'loseStamina') {
+      effectChance = effect.chance * (1 - totalRiskReduction);
+    }
+    
+    if (Math.random() > effectChance) return;
 
     switch (effect.type) {
       case 'loseMoney':
-        const moneyLoss = effect.moneyLoss || Math.round(result.caravanUpdates.money * (effect.moneyLossPercent || 0));
+        let moneyLoss = effect.moneyLoss || Math.round(result.caravanUpdates.money * (effect.moneyLossPercent || 0));
+        moneyLoss = Math.round(moneyLoss * (1 - totalLossReduction));
         result.caravanUpdates.money = Math.max(0, result.caravanUpdates.money - moneyLoss);
         result.messages.push(`损失了 ${moneyLoss} 金币`);
         break;
 
       case 'loseGoods':
         Object.keys(result.caravanUpdates.inventory).forEach(goodId => {
-          const lossAmount = Math.floor(result.caravanUpdates.inventory[goodId] * (effect.goodsLossPercent || 0.1));
+          let lossAmount = Math.floor(result.caravanUpdates.inventory[goodId] * (effect.goodsLossPercent || 0.1));
+          lossAmount = Math.floor(lossAmount * (1 - totalLossReduction));
           result.caravanUpdates.inventory[goodId] = Math.max(0, result.caravanUpdates.inventory[goodId] - lossAmount);
           if (lossAmount > 0) {
             const good = goods.find(g => g.id === goodId);
@@ -154,8 +314,10 @@ function applyEventEffect(event, caravan, goods) {
         break;
 
       case 'loseStamina':
-        result.caravanUpdates.stamina = Math.max(0, result.caravanUpdates.stamina - (effect.staminaLoss || 10));
-        result.messages.push(`体力下降了 ${effect.staminaLoss || 10} 点`);
+        let staminaLoss = effect.staminaLoss || 10;
+        staminaLoss = Math.round(staminaLoss * (1 - totalLossReduction * 0.5));
+        result.caravanUpdates.stamina = Math.max(0, result.caravanUpdates.stamina - staminaLoss);
+        result.messages.push(`体力下降了 ${staminaLoss} 点`);
         break;
 
       case 'restoreStamina':
@@ -171,7 +333,7 @@ function applyEventEffect(event, caravan, goods) {
       case 'gainGoods':
         let gainGoodId = effect.goodsId;
         if (effect.randomGoods || !gainGoodId) {
-          const availableGoods = goods.filter(g => g.id !== 'drugs');
+          const availableGoods = goods.filter(g => !g.blackMarketOnly);
           gainGoodId = availableGoods[Math.floor(Math.random() * availableGoods.length)].id;
         }
         result.caravanUpdates.inventory[gainGoodId] = (result.caravanUpdates.inventory[gainGoodId] || 0) + (effect.amount || 5);
@@ -243,19 +405,53 @@ function simulateMarketFluctuation(cityInventories, goods) {
     goods.forEach(good => {
       const current = cityInventories[cityId]?.[good.id] || 50;
       const change = Math.floor((Math.random() - 0.5) * 20);
-      newInventories[cityId][good.id] = Math.max(5, Math.min(150, current + change));
+      const minStock = good.blackMarketOnly ? 2 : 5;
+      const maxStock = good.blackMarketOnly ? 30 : 150;
+      newInventories[cityId][good.id] = Math.max(minStock, Math.min(maxStock, current + change));
     });
   });
   return newInventories;
 }
 
+function getAvailableMercenaries(cityId, allMercenaries, cityAvailability) {
+  const availableIds = cityAvailability[cityId] || [];
+  return allMercenaries.filter(m => availableIds.includes(m.id));
+}
+
+function calculateMercenaryWage(mercenaries) {
+  return mercenaries.reduce((total, m) => total + m.wage, 0);
+}
+
+function getMercenaryEffects(mercenaries) {
+  let totalRiskReduction = 0;
+  let totalLossReduction = 0;
+  let totalCombatPower = 0;
+  
+  mercenaries.forEach(merc => {
+    totalRiskReduction += merc.riskReduction || 0;
+    totalLossReduction += merc.lossReduction || 0;
+    totalCombatPower += merc.combatPower || 0;
+  });
+  
+  return {
+    riskReduction: Math.min(0.7, totalRiskReduction),
+    lossReduction: Math.min(0.6, totalLossReduction),
+    combatPower: totalCombatPower
+  };
+}
+
 module.exports = {
   calculateCityPrices,
+  calculateBlackMarketRisk,
+  rollBlackMarketEvent,
   calculateTravelCost,
   getConnectedCities,
   calculateCaravanWeight,
   rollRandomEvent,
   applyEventEffect,
   updateCityInventoryAfterTrade,
-  simulateMarketFluctuation
+  simulateMarketFluctuation,
+  getAvailableMercenaries,
+  calculateMercenaryWage,
+  getMercenaryEffects
 };
