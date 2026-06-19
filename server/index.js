@@ -29,6 +29,7 @@ app.use(express.json());
 
 const gameSessions = new Map();
 const cityInventoriesCache = new Map();
+const cityPricesCache = new Map();
 
 function verifyGameSession(req, res, next) {
   const { sessionId } = req.body;
@@ -44,6 +45,9 @@ function verifyGameSession(req, res, next) {
         if (record.cityInventories) {
           cityInventoriesCache.set(sessionId, record.cityInventories);
         }
+        if (record.cityPrices) {
+          cityPricesCache.set(sessionId, record.cityPrices);
+        }
         req.game = record;
         return next();
       }
@@ -57,6 +61,30 @@ function verifyGameSession(req, res, next) {
   }
   req.game = game;
   next();
+}
+
+function getOrCreateCityPrices(sessionId, cityId, cityInventories, city, goods) {
+  if (!cityPricesCache.has(sessionId)) {
+    cityPricesCache.set(sessionId, {});
+  }
+  const sessionPrices = cityPricesCache.get(sessionId);
+  
+  if (!sessionPrices[cityId]) {
+    sessionPrices[cityId] = calculateCityPrices(cityId, cityInventories, city, goods, null);
+  }
+  
+  return calculateCityPrices(cityId, cityInventories, city, goods, sessionPrices);
+}
+
+function invalidateCityPrices(sessionId, cityId) {
+  if (cityPricesCache.has(sessionId)) {
+    const sessionPrices = cityPricesCache.get(sessionId);
+    delete sessionPrices[cityId];
+  }
+}
+
+function invalidateAllCityPrices(sessionId) {
+  cityPricesCache.delete(sessionId);
 }
 
 function getCities() {
@@ -98,9 +126,11 @@ function getOrCreateCityInventories(sessionId) {
 function saveGameRecordForUser(userId, sessionId, game) {
   if (!userId) return;
   const cityInventories = cityInventoriesCache.get(sessionId);
+  const cityPrices = cityPricesCache.get(sessionId);
   const record = {
     ...game,
     cityInventories,
+    cityPrices,
     updatedAt: Date.now()
   };
   store.saveGameRecord(userId, sessionId, record);
@@ -172,9 +202,10 @@ app.post('/api/game/create', authMiddleware, (req, res) => {
 
   gameSessions.set(sessionId, game);
   cityInventoriesCache.set(sessionId, getInitialCityInventories());
+  cityPricesCache.set(sessionId, {});
 
   const cityInventories = cityInventoriesCache.get(sessionId);
-  const currentPrices = calculateCityPrices(startCityId, cityInventories[startCityId], startCity, goods);
+  const currentPrices = getOrCreateCityPrices(sessionId, startCityId, cityInventories[startCityId], startCity, goods);
   const connectedCities = getConnectedCities(startCityId, cities, connections);
 
   saveGameRecordForUser(userId, sessionId, game);
@@ -203,13 +234,16 @@ app.post('/api/game/load', authMiddleware, (req, res) => {
   if (record.cityInventories) {
     cityInventoriesCache.set(recordId, record.cityInventories);
   }
+  if (record.cityPrices) {
+    cityPricesCache.set(recordId, record.cityPrices);
+  }
 
   const cities = getCities();
   const goods = getGoods();
   const connections = getConnections();
   const cityInventories = getOrCreateCityInventories(recordId);
   const currentCity = cities.find(c => c.id === record.caravan.currentCityId);
-  const currentPrices = calculateCityPrices(currentCity.id, cityInventories[currentCity.id], currentCity, goods);
+  const currentPrices = getOrCreateCityPrices(recordId, currentCity.id, cityInventories[currentCity.id], currentCity, goods);
   const connectedCities = getConnectedCities(currentCity.id, cities, connections);
 
   res.json({
@@ -242,7 +276,7 @@ app.post('/api/game/state', authMiddleware, verifyGameSession, (req, res) => {
   const connections = getConnections();
   const cityInventories = getOrCreateCityInventories(sessionId);
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
-  const currentPrices = calculateCityPrices(currentCity.id, cityInventories[currentCity.id], currentCity, goods);
+  const currentPrices = getOrCreateCityPrices(sessionId, currentCity.id, cityInventories[currentCity.id], currentCity, goods);
   const connectedCities = getConnectedCities(currentCity.id, cities, connections);
 
   res.json({
@@ -273,7 +307,7 @@ app.post('/api/trade/buy', authMiddleware, verifyGameSession, (req, res) => {
   }
 
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
-  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const currentPrices = getOrCreateCityPrices(sessionId, game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
   const priceInfo = currentPrices[goodId];
 
   if (!priceInfo) {
@@ -324,7 +358,7 @@ app.post('/api/trade/buy', authMiddleware, verifyGameSession, (req, res) => {
     money: game.caravan.money
   });
 
-  const updatedPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const updatedPrices = getOrCreateCityPrices(sessionId, game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
   const weight = calculateCaravanWeight(game.caravan.inventory, goods);
 
   game.updatedAt = Date.now();
@@ -363,7 +397,7 @@ app.post('/api/trade/sell', authMiddleware, verifyGameSession, (req, res) => {
   }
 
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
-  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const currentPrices = getOrCreateCityPrices(sessionId, game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
   const priceInfo = currentPrices[goodId];
 
   const totalEarning = priceInfo.sellPrice * amount;
@@ -397,7 +431,7 @@ app.post('/api/trade/sell', authMiddleware, verifyGameSession, (req, res) => {
     money: game.caravan.money
   });
 
-  const updatedPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const updatedPrices = getOrCreateCityPrices(sessionId, game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
   const weight = calculateCaravanWeight(game.caravan.inventory, goods);
 
   game.updatedAt = Date.now();
@@ -456,6 +490,7 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
 
   const newCityInventories = simulateMarketFluctuation(cityInventoriesCache.get(sessionId), goods);
   cityInventoriesCache.set(sessionId, newCityInventories);
+  invalidateAllCityPrices(sessionId);
 
   const randomEvent = rollRandomEvent(travelCost.danger, events);
 
@@ -491,7 +526,7 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
       });
 
       const arrivedCity = cities.find(c => c.id === toCityId);
-      const arrivedPrices = calculateCityPrices(toCityId, newCityInventories[toCityId], arrivedCity, goods);
+      const arrivedPrices = getOrCreateCityPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods);
       const connectedCities = getConnectedCities(toCityId, cities, connections);
 
       game.updatedAt = Date.now();
@@ -519,7 +554,7 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
   }
 
   const arrivedCity = cities.find(c => c.id === toCityId);
-  const arrivedPrices = calculateCityPrices(toCityId, newCityInventories[toCityId], arrivedCity, goods);
+  const arrivedPrices = getOrCreateCityPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods);
   const connectedCities = getConnectedCities(toCityId, cities, connections);
 
   game.updatedAt = Date.now();
@@ -609,7 +644,7 @@ app.post('/api/event/resolve', authMiddleware, verifyGameSession, (req, res) => 
 
   const cityInventories = cityInventoriesCache.get(sessionId);
   const arrivedCity = cities.find(c => c.id === targetCityId);
-  const arrivedPrices = calculateCityPrices(targetCityId, cityInventories[targetCityId], arrivedCity, goods);
+  const arrivedPrices = getOrCreateCityPrices(sessionId, targetCityId, cityInventories[targetCityId], arrivedCity, goods);
   const connectedCities = getConnectedCities(targetCityId, cities, connections);
 
   game.updatedAt = Date.now();
@@ -657,7 +692,7 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
 
   const cityInventories = cityInventoriesCache.get(sessionId);
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
-  const currentPrices = calculateCityPrices(game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
+  const currentPrices = getOrCreateCityPrices(sessionId, game.caravan.currentCityId, cityInventories[game.caravan.currentCityId], currentCity, goods);
 
   game.updatedAt = Date.now();
   if (game.userId) {

@@ -4,17 +4,19 @@
     "id": "38d3ce25-a7ac-4ac4-bc53-fb712800b3eb",
     "name": "111111",
     "leader": "111111",
-    "money": 935,
+    "money": 162,
     "maxCarryWeight": 100,
-    "stamina": 100,
+    "stamina": 73,
     "maxStamina": 100,
-    "currentCityId": "city-1",
+    "currentCityId": "city-2",
     "inventory": {
-      "water": 7,
-      "food": 5,
-      "medicine": 2,
-      "weapons": 1,
-      "scrap": 2
+      "water": 8,
+      "food": 0,
+      "medicine": 0,
+      "weapons": 0,
+      "scrap": 15,
+      "steel": 0,
+      "fuel": 0
     },
     "tradeHistory": [
       {
@@ -40,6 +42,378 @@
         "cityId": "city-1",
         "cityName": "灰烬堡垒",
         "time": 1781801236659
+      },
+      {
+        "id": "e62f8d70-de66-4152-8256-1c9f15e4d4e2",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 33,
+        "totalPrice": 33,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854494061
+      },
+      {
+        "id": "541db02a-780e-48ec-ad12-d86bf58ef893",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 35,
+        "totalPrice": 35,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854499407
+      },
+      {
+        "id": "2a22a86c-8875-4201-9839-a823d33bddf2",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 35,
+        "totalPrice": 35,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854505231
+      },
+      {
+        "id": "1f013201-b063-4fb0-91f1-347b75e8bed0",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 35,
+        "totalPrice": 35,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854513865
+      },
+      {
+        "id": "a45485ac-60cb-47f0-b614-ee9c2e3b41d0",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 31,
+        "totalPrice": 31,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854519793
+      },
+      {
+        "id": "3ec9d329-36f8-44cb-b420-6db75ce3914d",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 33,
+        "totalPrice": 33,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854536918
+      },
+      {
+        "id": "03e6295e-d0b3-4fc6-9db4-a753541e4f38",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 34,
+        "totalPrice": 34,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854539494
+      },
+      {
+        "id": "3d99e669-1a10-401b-90de-d123895788f7",
+        "type": "sell",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 27,
+        "totalPrice": 27,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854566077
+      },
+      {
+        "id": "5dbbc69b-b34f-477b-b5ee-abd4c02f6c8d",
+        "type": "sell",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 27,
+        "totalPrice": 27,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854601294
+      },
+      {
+        "id": "2f4741e4-8ad7-4924-9adc-309822d7c093",
+        "type": "buy",
+        "goodId": "steel",
+        "goodName": "钢材",
+        "amount": 1,
+        "unitPrice": 22,
+        "totalPrice": 22,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854608181
+      },
+      {
+        "id": "dc580e68-eb6c-4e8c-9952-df18560d0c95",
+        "type": "buy",
+        "goodId": "food",
+        "goodName": "干粮",
+        "amount": 1,
+        "unitPrice": 21,
+        "totalPrice": 21,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854918034
+      },
+      {
+        "id": "c5bdbc94-5b43-48f0-a065-11eb1da89de6",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 35,
+        "totalPrice": 35,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854986814
+      },
+      {
+        "id": "422ac9f0-c3c6-45d0-99df-025edc836819",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 34,
+        "totalPrice": 34,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855943207
+      },
+      {
+        "id": "b5648feb-dc5e-4299-9b8f-6e43c08a01e2",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 34,
+        "totalPrice": 34,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855957807
+      },
+      {
+        "id": "8f5c53e5-e846-474a-a9d4-a3e395c619a7",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 34,
+        "totalPrice": 34,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855959804
+      },
+      {
+        "id": "60803774-24dd-4d71-8bb3-f538b11cd7b9",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 34,
+        "totalPrice": 34,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855966581
+      },
+      {
+        "id": "6c102a35-09b6-4e57-be97-0218afa99b96",
+        "type": "sell",
+        "goodId": "medicine",
+        "goodName": "药品",
+        "amount": 1,
+        "unitPrice": 57,
+        "totalPrice": 57,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855979893
+      },
+      {
+        "id": "abba04a5-1fed-4507-9b78-9a50c85defda",
+        "type": "sell",
+        "goodId": "medicine",
+        "goodName": "药品",
+        "amount": 1,
+        "unitPrice": 57,
+        "totalPrice": 57,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855985104
+      },
+      {
+        "id": "29c6ea96-3373-4f43-bb1b-b7a16c5cdda6",
+        "type": "buy",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 1,
+        "unitPrice": 3,
+        "totalPrice": 3,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855993687
+      },
+      {
+        "id": "d701b7cf-82ad-44f2-b8b3-506963eb2a2b",
+        "type": "buy",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 1,
+        "unitPrice": 3,
+        "totalPrice": 3,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855995665
+      },
+      {
+        "id": "c55e6351-2d55-499d-a84d-c58d6507f247",
+        "type": "buy",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 1,
+        "unitPrice": 3,
+        "totalPrice": 3,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781855996255
+      },
+      {
+        "id": "aaf4431f-6b87-421b-aea3-700d2af33cdf",
+        "type": "buy",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 20,
+        "unitPrice": 3,
+        "totalPrice": 60,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856008237
+      },
+      {
+        "id": "f091e8cf-d9f8-46bd-a633-a2f523050a05",
+        "type": "sell",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 5,
+        "unitPrice": 3,
+        "totalPrice": 15,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856029608
+      },
+      {
+        "id": "4b9ebaa6-0937-415b-8b3d-3ed012084d0b",
+        "type": "buy",
+        "goodId": "food",
+        "goodName": "干粮",
+        "amount": 4,
+        "unitPrice": 23,
+        "totalPrice": 92,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856031866
+      },
+      {
+        "id": "8bed616a-406c-4c13-b60b-2607e8d72d29",
+        "type": "sell",
+        "goodId": "weapons",
+        "goodName": "武器",
+        "amount": 1,
+        "unitPrice": 49,
+        "totalPrice": 49,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856064965
+      },
+      {
+        "id": "daf8df8c-5c29-48d8-ad02-61b9eeb90319",
+        "type": "sell",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 5,
+        "unitPrice": 3,
+        "totalPrice": 15,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856090245
+      },
+      {
+        "id": "78bc545a-f277-4612-b28f-3a57a220021e",
+        "type": "buy",
+        "goodId": "fuel",
+        "goodName": "燃料",
+        "amount": 7,
+        "unitPrice": 39,
+        "totalPrice": 273,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856093933
+      },
+      {
+        "id": "edc331b0-a311-4812-b9b4-9a0f29180396",
+        "type": "buy",
+        "goodId": "fuel",
+        "goodName": "燃料",
+        "amount": 2,
+        "unitPrice": 39,
+        "totalPrice": 78,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781856103529
+      },
+      {
+        "id": "53d520bc-3f5e-4151-bce4-15f3cf83ade9",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 11,
+        "totalPrice": 11,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781856116141
+      },
+      {
+        "id": "660ee6f6-1451-4485-a372-ebd0fc4e56a5",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 11,
+        "totalPrice": 11,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781856120575
+      },
+      {
+        "id": "8d75a7ab-eda4-4b2e-8843-72bb6fb8c4e6",
+        "type": "sell",
+        "goodId": "steel",
+        "goodName": "钢材",
+        "amount": 1,
+        "unitPrice": 64,
+        "totalPrice": 64,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781856131227
       }
     ],
     "moneyHistory": [
@@ -54,69 +428,260 @@
       {
         "time": 2,
         "money": 935
+      },
+      {
+        "time": 3,
+        "money": 902
+      },
+      {
+        "time": 4,
+        "money": 867
+      },
+      {
+        "time": 5,
+        "money": 832
+      },
+      {
+        "time": 6,
+        "money": 797
+      },
+      {
+        "time": 7,
+        "money": 766
+      },
+      {
+        "time": 8,
+        "money": 733
+      },
+      {
+        "time": 9,
+        "money": 699
+      },
+      {
+        "time": 10,
+        "money": 726
+      },
+      {
+        "time": 11,
+        "money": 753
+      },
+      {
+        "time": 12,
+        "money": 731
+      },
+      {
+        "time": 13,
+        "money": 660
+      },
+      {
+        "time": 14,
+        "money": 575
+      },
+      {
+        "time": 15,
+        "money": 541
+      },
+      {
+        "time": 16,
+        "money": 507
+      },
+      {
+        "time": 17,
+        "money": 473
+      },
+      {
+        "time": 18,
+        "money": 439
+      },
+      {
+        "time": 19,
+        "money": 496
+      },
+      {
+        "time": 20,
+        "money": 553
+      },
+      {
+        "time": 21,
+        "money": 550
+      },
+      {
+        "time": 22,
+        "money": 547
+      },
+      {
+        "time": 23,
+        "money": 544
+      },
+      {
+        "time": 24,
+        "money": 484
+      },
+      {
+        "time": 25,
+        "money": 499
+      },
+      {
+        "time": 26,
+        "money": 407
+      },
+      {
+        "time": 27,
+        "money": 456
+      },
+      {
+        "time": 28,
+        "money": 471
+      },
+      {
+        "time": 29,
+        "money": 198
+      },
+      {
+        "time": 30,
+        "money": 120
+      },
+      {
+        "time": 31,
+        "money": 109
+      },
+      {
+        "time": 32,
+        "money": 98
+      },
+      {
+        "time": 33,
+        "money": 162
       }
     ],
-    "travelCount": 0,
+    "travelCount": 1,
     "reputation": 50
   },
   "createdAt": 1781800873851,
-  "updatedAt": 1781801236659,
+  "updatedAt": 1781856131227,
   "pendingEvent": null,
   "cityInventories": {
     "city-1": {
-      "water": 87,
-      "food": 73,
-      "medicine": 30,
-      "fuel": 79,
-      "weapons": 38,
+      "water": 83,
+      "food": 58,
+      "medicine": 29,
+      "fuel": 72,
+      "weapons": 39,
       "steel": 38,
-      "scrap": 85,
-      "drugs": 96,
-      "clothes": 60
+      "scrap": 76,
+      "drugs": 86,
+      "clothes": 56
     },
     "city-2": {
-      "water": 31,
-      "food": 74,
-      "medicine": 95,
-      "fuel": 88,
-      "weapons": 54,
-      "steel": 43,
-      "scrap": 70,
-      "drugs": 95,
-      "clothes": 62
+      "water": 28,
+      "food": 80,
+      "medicine": 87,
+      "fuel": 85,
+      "weapons": 50,
+      "steel": 52,
+      "scrap": 69,
+      "drugs": 93,
+      "clothes": 66
     },
     "city-3": {
-      "water": 45,
-      "food": 66,
+      "water": 46,
+      "food": 67,
       "medicine": 56,
-      "fuel": 76,
-      "weapons": 42,
-      "steel": 49,
-      "scrap": 44,
-      "drugs": 47,
-      "clothes": 98
+      "fuel": 68,
+      "weapons": 49,
+      "steel": 45,
+      "scrap": 51,
+      "drugs": 51,
+      "clothes": 88
     },
     "city-4": {
-      "water": 59,
-      "food": 37,
-      "medicine": 97,
-      "fuel": 80,
-      "weapons": 78,
+      "water": 60,
+      "food": 42,
+      "medicine": 100,
+      "fuel": 75,
+      "weapons": 68,
       "steel": 58,
-      "scrap": 30,
-      "drugs": 76,
-      "clothes": 62
+      "scrap": 35,
+      "drugs": 84,
+      "clothes": 52
     },
     "city-5": {
-      "water": 49,
-      "food": 72,
-      "medicine": 42,
-      "fuel": 62,
-      "weapons": 51,
-      "steel": 89,
-      "scrap": 47,
-      "drugs": 99,
-      "clothes": 75
+      "water": 40,
+      "food": 70,
+      "medicine": 33,
+      "fuel": 57,
+      "weapons": 48,
+      "steel": 97,
+      "scrap": 49,
+      "drugs": 94,
+      "clothes": 76
+    }
+  },
+  "cityPrices": {
+    "city-2": {
+      "water": {
+        "buyPrice": 11,
+        "sellPrice": 9,
+        "stock": 30,
+        "demand": "低",
+        "supply": "充足"
+      },
+      "food": {
+        "buyPrice": 6,
+        "sellPrice": 5,
+        "stock": 80,
+        "demand": "低",
+        "supply": "充足"
+      },
+      "medicine": {
+        "buyPrice": 64,
+        "sellPrice": 52,
+        "stock": 87,
+        "demand": "中",
+        "supply": "正常"
+      },
+      "fuel": {
+        "buyPrice": 51,
+        "sellPrice": 41,
+        "stock": 85,
+        "demand": "高",
+        "supply": "正常"
+      },
+      "weapons": {
+        "buyPrice": 246,
+        "sellPrice": 202,
+        "stock": 50,
+        "demand": "高",
+        "supply": "稀缺"
+      },
+      "steel": {
+        "buyPrice": 78,
+        "sellPrice": 64,
+        "stock": 51,
+        "demand": "中",
+        "supply": "正常"
+      },
+      "scrap": {
+        "buyPrice": 14,
+        "sellPrice": 12,
+        "stock": 69,
+        "demand": "中",
+        "supply": "正常"
+      },
+      "drugs": {
+        "buyPrice": 110,
+        "sellPrice": 90,
+        "stock": 93,
+        "demand": "中",
+        "supply": "正常"
+      },
+      "clothes": {
+        "buyPrice": 30,
+        "sellPrice": 24,
+        "stock": 66,
+        "demand": "中",
+        "supply": "正常"
+      }
     }
   }
 }

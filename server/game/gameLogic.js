@@ -1,5 +1,21 @@
-function calculateCityPrices(cityId, cityInventory, city, goods) {
+function calculateCityPrices(cityId, cityInventory, city, goods, priceCache) {
   if (!city) return {};
+
+  if (priceCache && priceCache[cityId]) {
+    const cachedPrices = {};
+    goods.forEach(good => {
+      if (priceCache[cityId][good.id]) {
+        const inventory = cityInventory[good.id] || 0;
+        cachedPrices[good.id] = {
+          ...priceCache[cityId][good.id],
+          stock: Math.max(0, inventory)
+        };
+      }
+    });
+    if (Object.keys(cachedPrices).length === goods.length) {
+      return cachedPrices;
+    }
+  }
 
   const prices = {};
   goods.forEach(good => {
@@ -14,7 +30,7 @@ function calculateCityPrices(cityId, cityInventory, city, goods) {
     prices[good.id] = {
       buyPrice: Math.round(finalPrice * 1.1),
       sellPrice: Math.round(finalPrice * 0.9),
-      stock: Math.floor(20 + Math.random() * 80),
+      stock: Math.max(0, inventory),
       demand: demand > 1.2 ? '高' : demand < 0.8 ? '低' : '中',
       supply: supply > 1.2 ? '充足' : supply < 0.8 ? '稀缺' : '正常'
     };

@@ -4,34 +4,51 @@
     "id": "bbc872f7-7cd8-4c44-bd12-e5b9128a9455",
     "name": "111111",
     "leader": "111111",
-    "money": 1000,
+    "money": 949,
     "maxCarryWeight": 100,
     "stamina": 100,
     "maxStamina": 100,
     "currentCityId": "city-1",
     "inventory": {
-      "water": 5,
+      "water": 6,
       "food": 5,
       "medicine": 2,
       "weapons": 1,
       "scrap": 2
     },
-    "tradeHistory": [],
+    "tradeHistory": [
+      {
+        "id": "6d0caf93-6aa1-4748-b098-21df9700ef6d",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 51,
+        "totalPrice": 51,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781854971051
+      }
+    ],
     "moneyHistory": [
       {
         "time": 0,
         "money": 1000
+      },
+      {
+        "time": 1,
+        "money": 949
       }
     ],
     "travelCount": 0,
     "reputation": 50
   },
   "createdAt": 1781800848920,
-  "updatedAt": 1781800848921,
+  "updatedAt": 1781854971051,
   "pendingEvent": null,
   "cityInventories": {
     "city-1": {
-      "water": 30,
+      "water": 29,
       "food": 69,
       "medicine": 89,
       "fuel": 66,
