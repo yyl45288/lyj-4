@@ -318,19 +318,30 @@ function GameApp() {
       const result = await api.startTravel(sessionId, selectedDestination);
       setCaravan(result.caravan);
       setWeight(result.weight);
-      setHiredMercenaries(result.hiredMercenaries || []);
+      
+      if (result.hiredMercenaries) {
+        setHiredMercenaries(result.hiredMercenaries);
+      }
+      if (result.availableMercenaries) {
+        setAvailableMercenaries(result.availableMercenaries);
+      }
 
-      if (result.eventOccurred && result.event) {
+      if (result.eventOccurred && result.event && result.event.hasChoices) {
         setActiveEvent(result.event);
         setActiveEventResult(result.eventResult || null);
-      } else if (result.currentCity) {
-        setCurrentCity(result.currentCity);
-        setCurrentPrices(result.currentPrices);
-        setConnectedCities(result.connectedCities);
-        setBlackMarketPrices(result.blackMarketPrices || {});
-        setAvailableMercenaries(result.availableMercenaries || []);
-        setSelectedDestination(null);
-        showMessage(`安全抵达「${result.currentCity.name}」！市场价格已更新。`, 'success');
+      } else {
+        if (result.currentCity) {
+          setCurrentCity(result.currentCity);
+          setCurrentPrices(result.currentPrices);
+          setConnectedCities(result.connectedCities);
+          setBlackMarketPrices(result.blackMarketPrices || {});
+          setSelectedDestination(null);
+        }
+        if (result.eventOccurred && result.eventResult) {
+          showMessage(`${result.event.name}：${result.eventResult.join(' | ')}`, 'success');
+        } else if (result.currentCity) {
+          showMessage(`安全抵达「${result.currentCity.name}」！市场价格已更新。`, 'success');
+        }
       }
     } catch (err) {
       showMessage(err.message, 'error');

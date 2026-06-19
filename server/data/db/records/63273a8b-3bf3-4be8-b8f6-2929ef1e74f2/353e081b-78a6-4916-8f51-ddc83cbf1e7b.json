@@ -1,0 +1,558 @@
+{
+  "userId": "63273a8b-3bf3-4be8-b8f6-2929ef1e74f2",
+  "caravan": {
+    "id": "024c24ba-08e7-40d5-93bf-debfe4cf1594",
+    "name": "222222",
+    "leader": "222222",
+    "money": 503,
+    "maxCarryWeight": 100,
+    "stamina": 73,
+    "maxStamina": 100,
+    "currentCityId": "city-2",
+    "inventory": {
+      "water": 9,
+      "food": 2,
+      "medicine": 2,
+      "weapons": 1,
+      "scrap": 3,
+      "drugs": 0,
+      "steel": 1,
+      "fuel": 1
+    },
+    "tradeHistory": [
+      {
+        "id": "4b802d81-d98e-41c3-a930-8c9f0c5aca0f",
+        "type": "mercenary_hire",
+        "mercenaryId": "merc-1",
+        "mercenaryName": "老兵杰克",
+        "wage": 80,
+        "cityId": "city-1",
+        "time": 1781882216286
+      },
+      {
+        "id": "08bbc11a-d454-4b8a-b9c3-17b23517cc4a",
+        "type": "blackmarket_buy",
+        "goodId": "drugs",
+        "goodName": "黑市药品",
+        "amount": 1,
+        "unitPrice": 214,
+        "totalPrice": 214,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "blackMarket": true,
+        "event": null,
+        "eventResult": null,
+        "time": 1781882228688
+      },
+      {
+        "id": "6253367d-fc7c-47c1-b1a0-e168a0968774",
+        "type": "buy",
+        "goodId": "scrap",
+        "goodName": "废料",
+        "amount": 1,
+        "unitPrice": 4,
+        "totalPrice": 4,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781882249591
+      },
+      {
+        "id": "f8a65dc9-df49-446e-95cb-abf822d7688c",
+        "type": "buy",
+        "goodId": "steel",
+        "goodName": "钢材",
+        "amount": 1,
+        "unitPrice": 23,
+        "totalPrice": 23,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781882250696
+      },
+      {
+        "id": "7474dfc1-5ab5-4a7d-b8da-a1276d440e2d",
+        "type": "buy",
+        "goodId": "fuel",
+        "goodName": "燃料",
+        "amount": 1,
+        "unitPrice": 34,
+        "totalPrice": 34,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781882252313
+      },
+      {
+        "id": "a8679c9e-e59e-44bc-b8b5-41b15743f99d",
+        "type": "buy",
+        "goodId": "weapons",
+        "goodName": "武器",
+        "amount": 1,
+        "unitPrice": 67,
+        "totalPrice": 67,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781882253842
+      },
+      {
+        "id": "de610874-dfb4-471d-a359-a2edbbae9150",
+        "type": "buy",
+        "goodId": "steel",
+        "goodName": "钢材",
+        "amount": 1,
+        "unitPrice": 20,
+        "totalPrice": 20,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781882265183
+      },
+      {
+        "id": "c3cedcf9-79e7-4c17-88e3-8c388b4b433c",
+        "type": "buy",
+        "goodId": "fuel",
+        "goodName": "燃料",
+        "amount": 8,
+        "unitPrice": 33,
+        "totalPrice": 264,
+        "cityId": "city-1",
+        "cityName": "灰烬堡垒",
+        "time": 1781882777989
+      },
+      {
+        "id": "5943c732-f62f-46e2-8357-5d35360757f7",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882859673
+      },
+      {
+        "id": "7ee61402-615f-4799-973c-7808b8ca71fc",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882860808
+      },
+      {
+        "id": "ac154e98-fe16-4dcd-ad14-f4a30a4d27dd",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882861799
+      },
+      {
+        "id": "b0522dfb-cd55-400a-bd70-802fc1125dd5",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882862061
+      },
+      {
+        "id": "0048d763-1c32-4b54-aa7f-599746a194bf",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882863009
+      },
+      {
+        "id": "1491f0a4-a9b2-4525-abda-7847d1d163f2",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 11,
+        "totalPrice": 11,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882863943
+      },
+      {
+        "id": "483aeba3-6074-45fb-b8c4-9a38f2b60fd5",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882867521
+      },
+      {
+        "id": "e5da6c0a-4afb-435f-94e4-454a49c7ad5f",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 10,
+        "totalPrice": 10,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882873596
+      },
+      {
+        "id": "0900c62f-1561-48b6-ba11-7cfedf586e0e",
+        "type": "buy",
+        "goodId": "water",
+        "goodName": "净水",
+        "amount": 1,
+        "unitPrice": 9,
+        "totalPrice": 9,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781882875255
+      },
+      {
+        "id": "cf4cdbe5-a0a8-40fa-8c9b-f0a2e5a3f193",
+        "type": "sell",
+        "goodId": "weapons",
+        "goodName": "武器",
+        "amount": 1,
+        "unitPrice": 202,
+        "totalPrice": 202,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781884133859
+      },
+      {
+        "id": "110e19f7-9ca2-4621-9d39-381b0e89c5bf",
+        "type": "sell",
+        "goodId": "steel",
+        "goodName": "钢材",
+        "amount": 1,
+        "unitPrice": 63,
+        "totalPrice": 63,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781884134359
+      },
+      {
+        "id": "8b2e63ce-7235-4253-8417-dc6de70a293d",
+        "type": "sell",
+        "goodId": "drugs",
+        "goodName": "黑市药品",
+        "amount": 1,
+        "unitPrice": 158,
+        "totalPrice": 158,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781884135362
+      },
+      {
+        "id": "8c9b0708-365d-45cb-8cd6-a855cbe30df7",
+        "type": "buy",
+        "goodId": "food",
+        "goodName": "干粮",
+        "amount": 1,
+        "unitPrice": 4,
+        "totalPrice": 4,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781884224797
+      },
+      {
+        "id": "bbc9116f-cb6f-4289-9062-0c38c98e8899",
+        "type": "buy",
+        "goodId": "fuel",
+        "goodName": "燃料",
+        "amount": 1,
+        "unitPrice": 46,
+        "totalPrice": 46,
+        "cityId": "city-2",
+        "cityName": "绿洲镇",
+        "time": 1781884225499
+      }
+    ],
+    "moneyHistory": [
+      {
+        "time": 0,
+        "money": 1000
+      },
+      {
+        "time": 1,
+        "money": 920
+      },
+      {
+        "time": 2,
+        "money": 706
+      },
+      {
+        "time": 3,
+        "money": 702
+      },
+      {
+        "time": 4,
+        "money": 679
+      },
+      {
+        "time": 5,
+        "money": 645
+      },
+      {
+        "time": 6,
+        "money": 578
+      },
+      {
+        "time": 7,
+        "money": 558
+      },
+      {
+        "time": 8,
+        "money": 294
+      },
+      {
+        "time": 9,
+        "money": 205
+      },
+      {
+        "time": 10,
+        "money": 196
+      },
+      {
+        "time": 11,
+        "money": 187
+      },
+      {
+        "time": 12,
+        "money": 178
+      },
+      {
+        "time": 13,
+        "money": 169
+      },
+      {
+        "time": 14,
+        "money": 158
+      },
+      {
+        "time": 15,
+        "money": 149
+      },
+      {
+        "time": 16,
+        "money": 139
+      },
+      {
+        "time": 17,
+        "money": 130
+      },
+      {
+        "time": 18,
+        "money": 332
+      },
+      {
+        "time": 19,
+        "money": 395
+      },
+      {
+        "time": 20,
+        "money": 553
+      },
+      {
+        "time": 21,
+        "money": 549
+      },
+      {
+        "time": 22,
+        "money": 503
+      }
+    ],
+    "travelCount": 1,
+    "reputation": 50,
+    "mercenaries": [
+      "merc-1"
+    ]
+  },
+  "createdAt": 1781882163358,
+  "updatedAt": 1781884225499,
+  "pendingEvent": null,
+  "cityInventories": {
+    "city-1": {
+      "water": 85,
+      "food": 66,
+      "medicine": 51,
+      "fuel": 69,
+      "weapons": 37,
+      "steel": 35,
+      "scrap": 62,
+      "drugs": 57,
+      "clothes": 94,
+      "rare-alloys": 7,
+      "nuclear-cores": 7,
+      "cyber-implants": 2,
+      "artifacts": 7,
+      "stims": 13
+    },
+    "city-2": {
+      "water": 38,
+      "food": 94,
+      "medicine": 37,
+      "fuel": 95,
+      "weapons": 50,
+      "steel": 44,
+      "scrap": 36,
+      "drugs": 27,
+      "clothes": 78,
+      "rare-alloys": 8,
+      "nuclear-cores": 2,
+      "cyber-implants": 2,
+      "artifacts": 2,
+      "stims": 4
+    },
+    "city-3": {
+      "water": 69,
+      "food": 25,
+      "medicine": 88,
+      "fuel": 87,
+      "weapons": 100,
+      "steel": 70,
+      "scrap": 73,
+      "drugs": 31,
+      "clothes": 65,
+      "rare-alloys": 2,
+      "nuclear-cores": 13,
+      "cyber-implants": 19,
+      "artifacts": 4,
+      "stims": 2
+    },
+    "city-4": {
+      "water": 35,
+      "food": 48,
+      "medicine": 47,
+      "fuel": 96,
+      "weapons": 71,
+      "steel": 70,
+      "scrap": 68,
+      "drugs": 94,
+      "clothes": 34,
+      "rare-alloys": 4,
+      "nuclear-cores": 2,
+      "cyber-implants": 10,
+      "artifacts": 7,
+      "stims": 6
+    },
+    "city-5": {
+      "water": 44,
+      "food": 50,
+      "medicine": 53,
+      "fuel": 77,
+      "weapons": 97,
+      "steel": 46,
+      "scrap": 51,
+      "drugs": 56,
+      "clothes": 52,
+      "rare-alloys": 2,
+      "nuclear-cores": 2,
+      "cyber-implants": 14,
+      "artifacts": 10,
+      "stims": 2
+    }
+  },
+  "cityPrices": {
+    "city-2": {
+      "water": {
+        "buyPrice": 9,
+        "sellPrice": 7,
+        "stock": 47,
+        "demand": "低",
+        "supply": "充足",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "food": {
+        "buyPrice": 4,
+        "sellPrice": 4,
+        "stock": 95,
+        "demand": "低",
+        "supply": "充足",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "medicine": {
+        "buyPrice": 97,
+        "sellPrice": 79,
+        "stock": 37,
+        "demand": "中",
+        "supply": "正常",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "fuel": {
+        "buyPrice": 46,
+        "sellPrice": 38,
+        "stock": 96,
+        "demand": "高",
+        "supply": "正常",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "weapons": {
+        "buyPrice": 257,
+        "sellPrice": 211,
+        "stock": 49,
+        "demand": "高",
+        "supply": "稀缺",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "steel": {
+        "buyPrice": 85,
+        "sellPrice": 69,
+        "stock": 43,
+        "demand": "中",
+        "supply": "正常",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "scrap": {
+        "buyPrice": 18,
+        "sellPrice": 14,
+        "stock": 36,
+        "demand": "中",
+        "supply": "正常",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      },
+      "drugs": {
+        "buyPrice": 189,
+        "sellPrice": 155,
+        "stock": 26,
+        "demand": "中",
+        "supply": "正常",
+        "isIllegal": true,
+        "blackMarketOnly": false
+      },
+      "clothes": {
+        "buyPrice": 24,
+        "sellPrice": 20,
+        "stock": 78,
+        "demand": "中",
+        "supply": "正常",
+        "isIllegal": false,
+        "blackMarketOnly": false
+      }
+    }
+  }
+}

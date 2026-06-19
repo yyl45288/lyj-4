@@ -571,6 +571,7 @@ app.post('/api/blackmarket/buy', authMiddleware, verifyGameSession, (req, res) =
 
   const cities = getCities();
   const goods = getGoods();
+  const mercInfo = getMercenariesInfo();
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
   
   if (!currentCity.hasBlackMarket) {
@@ -613,7 +614,9 @@ app.post('/api/blackmarket/buy', authMiddleware, verifyGameSession, (req, res) =
   );
 
   const goodsBought = { [goodId]: amount };
-  const blackMarketEvent = rollBlackMarketEvent(currentCity, goodsBought, game.caravan);
+  const hiredMercIds = game.caravan.mercenaries || [];
+  const hiredMercs = mercInfo.mercenaries.filter(m => hiredMercIds.includes(m.id));
+  const blackMarketEvent = rollBlackMarketEvent(currentCity, goodsBought, game.caravan, hiredMercs);
   
   let eventResult = null;
   if (blackMarketEvent) {
@@ -683,6 +686,7 @@ app.post('/api/blackmarket/sell', authMiddleware, verifyGameSession, (req, res) 
 
   const cities = getCities();
   const goods = getGoods();
+  const mercInfo = getMercenariesInfo();
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
   
   if (!currentCity.hasBlackMarket) {
@@ -717,7 +721,9 @@ app.post('/api/blackmarket/sell', authMiddleware, verifyGameSession, (req, res) 
   );
 
   const goodsSold = { [goodId]: amount };
-  const blackMarketEvent = rollBlackMarketEvent(currentCity, goodsSold, game.caravan);
+  const hiredMercIds = game.caravan.mercenaries || [];
+  const hiredMercs = mercInfo.mercenaries.filter(m => hiredMercIds.includes(m.id));
+  const blackMarketEvent = rollBlackMarketEvent(currentCity, goodsSold, game.caravan, hiredMercs);
   
   let eventResult = null;
   if (blackMarketEvent) {
@@ -965,7 +971,7 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
   cityInventoriesCache.set(sessionId, newCityInventories);
   invalidateAllCityPrices(sessionId);
 
-  const randomEvent = rollRandomEvent(travelCost.danger, events);
+  const randomEvent = rollRandomEvent(travelCost.danger, events, hiredMercs);
 
   if (randomEvent) {
     if (randomEvent.hasChoices) {

@@ -54,7 +54,7 @@ function calculateCityPrices(cityId, cityInventory, city, goods, priceCache, isB
   return prices;
 }
 
-function calculateBlackMarketRisk(city, goodsBought) {
+function calculateBlackMarketRisk(city, goodsBought, mercenaries = []) {
   const baseRisk = city.blackMarketRisk || 0.15;
   let riskMultiplier = 1;
   
@@ -67,15 +67,27 @@ function calculateBlackMarketRisk(city, goodsBought) {
   
   riskMultiplier += illegalValue * 0.02;
   
-  return Math.min(0.8, baseRisk * riskMultiplier);
+  let totalRiskReduction = 0;
+  mercenaries.forEach(merc => {
+    totalRiskReduction += merc.riskReduction || 0;
+  });
+  totalRiskReduction = Math.min(0.7, totalRiskReduction);
+  
+  return Math.min(0.8, baseRisk * riskMultiplier * (1 - totalRiskReduction));
 }
 
-function rollBlackMarketEvent(city, goodsBought, caravan) {
-  const risk = calculateBlackMarketRisk(city, goodsBought);
+function rollBlackMarketEvent(city, goodsBought, caravan, mercenaries = []) {
+  const risk = calculateBlackMarketRisk(city, goodsBought, mercenaries);
   
   if (Math.random() > risk) {
     return null;
   }
+  
+  let totalLossReduction = 0;
+  mercenaries.forEach(merc => {
+    totalLossReduction += merc.lossReduction || 0;
+  });
+  totalLossReduction = Math.min(0.6, totalLossReduction);
   
   const eventTypes = [
     { id: 'police-raid', name: '执法突袭', weight: 2, type: 'danger' },
@@ -109,7 +121,7 @@ function rollBlackMarketEvent(city, goodsBought, caravan) {
     case 'police-raid':
       result.messages.push('执法人员突袭了黑市！');
       
-      const confiscationRate = 0.3 + Math.random() * 0.4;
+      const confiscationRate = (0.3 + Math.random() * 0.4) * (1 - totalLossReduction);
       illegalGoods.forEach(([goodId, amount]) => {
         const lost = Math.floor(amount * confiscationRate);
         if (lost > 0) {
@@ -118,16 +130,16 @@ function rollBlackMarketEvent(city, goodsBought, caravan) {
         }
       });
       
-      const fine = Math.floor(caravan.money * (0.1 + Math.random() * 0.15));
+      const fine = Math.floor(caravan.money * (0.1 + Math.random() * 0.15) * (1 - totalLossReduction));
       result.moneyLoss = fine;
       result.messages.push(`被罚款 ${fine} 金币`);
-      result.staminaLoss = 15;
+      result.staminaLoss = Math.floor(15 * (1 - totalLossReduction * 0.5));
       break;
       
     case 'robbery':
       result.messages.push('一群劫匪盯上了你的黑市货物！');
       
-      const robberyRate = 0.2 + Math.random() * 0.3;
+      const robberyRate = (0.2 + Math.random() * 0.3) * (1 - totalLossReduction);
       illegalGoods.forEach(([goodId, amount]) => {
         const lost = Math.floor(amount * robberyRate);
         if (lost > 0) {
@@ -136,13 +148,13 @@ function rollBlackMarketEvent(city, goodsBought, caravan) {
         }
       });
       
-      result.staminaLoss = 20;
+      result.staminaLoss = Math.floor(20 * (1 - totalLossReduction * 0.5));
       break;
       
     case 'informant':
       result.messages.push('有人向当局告密了你的交易！');
       
-      const infoConfiscation = 0.15 + Math.random() * 0.2;
+      const infoConfiscation = (0.15 + Math.random() * 0.2) * (1 - totalLossReduction);
       illegalGoods.forEach(([goodId, amount]) => {
         const lost = Math.floor(amount * infoConfiscation);
         if (lost > 0) {
@@ -151,8 +163,8 @@ function rollBlackMarketEvent(city, goodsBought, caravan) {
         }
       });
       
-      result.moneyLoss = Math.floor(caravan.money * 0.05);
-      result.staminaLoss = 10;
+      result.moneyLoss = Math.floor(caravan.money * 0.05 * (1 - totalLossReduction));
+      result.staminaLoss = Math.floor(10 * (1 - totalLossReduction * 0.5));
       break;
   }
   
@@ -211,21 +223,30 @@ function calculateCaravanWeight(inventory, goods) {
   return Math.round(weight * 10) / 10;
 }
 
-function rollRandomEvent(dangerLevel, events) {
-  const eventChance = 0.3 + dangerLevel * 0.4;
-  if (Math.random() > eventChance) {
+function rollRandomEvent(dangerLevel, events, mercenaries = []) {
+  const eventChance = 0.5 + dangerLevel * 0.4;
+  
+  let totalRiskReduction = 0;
+  mercenaries.forEach(merc => {
+    totalRiskReduction += merc.riskReduction || 0;
+  });
+  totalRiskReduction = Math.min(0.5, totalRiskReduction);
+  
+  const adjustedChance = eventChance * (1 - totalRiskReduction);
+  
+  if (Math.random() > adjustedChance) {
     return null;
   }
 
   const availableEvents = events.filter(e => dangerLevel >= e.minDanger);
   if (availableEvents.length === 0) {
-    return null;
+    return events[0];
   }
 
   const weights = availableEvents.map(e => {
-    if (e.type === 'danger') return 3;
+    if (e.type === 'danger') return 3 + Math.floor(dangerLevel * 5);
     if (e.type === 'neutral') return 2;
-    return 1;
+    return 1 + Math.floor((1 - dangerLevel) * 3);
   });
 
   const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -238,7 +259,7 @@ function rollRandomEvent(dangerLevel, events) {
     }
   }
 
-  return availableEvents[0];
+  return availableEvents[availableEvents.length - 1];
 }
 
 function applyEventEffect(event, choiceId, caravan, goods, mercenaries = []) {
