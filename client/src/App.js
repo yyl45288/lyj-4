@@ -17,15 +17,26 @@ import RecordsModal from './components/RecordsModal';
 import QuestsPanel from './components/QuestsPanel';
 
 const SIDEBAR_TABS = [
-  { id: 'travel', icon: '🚗', label: '出发旅行', desc: '选择目的地并出发' },
-  { id: 'trade', icon: '🏪', label: '市场交易', desc: '买卖常规货物' },
-  { id: 'blackmarket', icon: '🌑', label: '黑市', desc: '稀有和非法交易', requires: 'hasBlackMarket' },
-  { id: 'mercenary', icon: '⚔️', label: '佣兵', desc: '雇佣或解雇佣兵' },
-  { id: 'quests', icon: '📜', label: '委托任务', desc: '接取和完成任务' },
-  { id: 'inventory', icon: '🎒', label: '物品背包', desc: '查看货物和状态' },
-  { id: 'log', icon: '📋', label: '交易日志', desc: '查看历史交易记录' },
-  { id: 'stats', icon: '📊', label: '统计', desc: '资金变化图表' },
+  { id: 'travel', icon: '🚗', label: '旅行', fullLabel: '出发旅行', desc: '选择目的地并出发' },
+  { id: 'trade', icon: '🏪', label: '市场', fullLabel: '市场交易', desc: '买卖常规货物' },
+  { id: 'blackmarket', icon: '🌑', label: '黑市', fullLabel: '黑市交易', desc: '稀有和非法交易', requires: 'hasBlackMarket' },
+  { id: 'mercenary', icon: '⚔️', label: '佣兵', fullLabel: '雇佣兵', desc: '雇佣或解雇佣兵' },
+  { id: 'quests', icon: '📜', label: '任务', fullLabel: '委托任务', desc: '接取和完成任务' },
+  { id: 'inventory', icon: '🎒', label: '背包', fullLabel: '物品背包', desc: '查看货物和状态' },
+  { id: 'log', icon: '📋', label: '日志', fullLabel: '交易日志', desc: '查看历史交易记录' },
+  { id: 'stats', icon: '📊', label: '统计', fullLabel: '资金统计', desc: '资金变化图表' },
 ];
+
+const MODAL_TAB_LABELS = {
+  travel: { icon: '🚗', title: '出发旅行' },
+  trade: { icon: '🏪', title: '市场交易' },
+  blackmarket: { icon: '🌑', title: '黑市交易' },
+  mercenary: { icon: '⚔️', title: '雇佣兵' },
+  quests: { icon: '📜', title: '委托任务' },
+  inventory: { icon: '🎒', title: '物品背包' },
+  log: { icon: '📋', title: '交易日志' },
+  stats: { icon: '📊', title: '资金统计' },
+};
 
 function GameApp() {
   const { user, logout, isAdmin } = useAuth();
@@ -60,7 +71,7 @@ function GameApp() {
   const [acceptedQuests, setAcceptedQuests] = useState([]);
   const [questMessage, setQuestMessage] = useState(null);
 
-  const [activeSidebarTab, setActiveSidebarTab] = useState('travel');
+  const [activeModalTab, setActiveModalTab] = useState(null);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -145,7 +156,7 @@ function GameApp() {
     setAcceptedQuests(gameData.acceptedQuests || []);
     setGameStarted(true);
     setShowNewGame(false);
-    setActiveSidebarTab('travel');
+    setActiveModalTab(null);
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
   }, [showMessage]);
 
@@ -572,7 +583,7 @@ function GameApp() {
 
   const handleCityClick = useCallback((city) => {
     setSelectedDestination(city.id);
-    setActiveSidebarTab('travel');
+    setActiveModalTab('travel');
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -596,17 +607,29 @@ function GameApp() {
     setActiveEvent(null);
     setActiveEventResult(null);
     setView('game');
-    setActiveSidebarTab('travel');
+    setActiveModalTab(null);
   }, [logout, gameStarted, sessionId]);
 
   const handleSidebarTabClick = useCallback((tabId) => {
-    setActiveSidebarTab(tabId);
+    if (activeModalTab === tabId) {
+      setActiveModalTab(null);
+      return;
+    }
+    setActiveModalTab(tabId);
     if (tabId === 'blackmarket') {
       loadBlackMarketPrices();
     } else if (tabId === 'mercenary') {
       loadAvailableMercenaries();
     }
-  }, [loadBlackMarketPrices, loadAvailableMercenaries]);
+  }, [activeModalTab, loadBlackMarketPrices, loadAvailableMercenaries]);
+
+  const closeModalTab = useCallback(() => {
+    setActiveModalTab(null);
+    setTradeMessage(null);
+    setBlackMarketMessage(null);
+    setMercenaryMessage(null);
+    setQuestMessage(null);
+  }, []);
 
   if (!user) {
     return <AuthPage />;
@@ -655,8 +678,8 @@ function GameApp() {
   const staminaPercent = caravan ? (caravan.stamina / caravan.maxStamina) * 100 : 0;
   const weightPercent = caravan && caravan.maxCarryWeight ? (weight / caravan.maxCarryWeight) * 100 : 0;
 
-  const renderSidebarContent = () => {
-    switch (activeSidebarTab) {
+  const renderModalContent = () => {
+    switch (activeModalTab) {
       case 'travel':
         return (
           <DestinationsPanel
@@ -751,14 +774,16 @@ function GameApp() {
     }
   };
 
+  const modalLabel = activeModalTab ? MODAL_TAB_LABELS[activeModalTab] : null;
+
   return (
     <div className="app app-new-layout">
       <header className="app-header compact-header">
-        <div>
+        <div className="header-left">
           <h1 className="compact-title">🏜️ 废土商队</h1>
           <div className="compact-subtitle">
-            {caravan?.name} · 领袖: {caravan?.leader}
-            {' · '}旅行: {caravan?.travelCount}次
+            {caravan?.name} · 领袖 {caravan?.leader}
+            {' · '}旅行 {caravan?.travelCount}次
             {' · '}📍 {currentCity?.name || '旅途中'}
           </div>
         </div>
@@ -770,33 +795,33 @@ function GameApp() {
               <span className="qs-minibar"><span style={{ width: `${staminaPercent}%` }}></span></span>
             </span>
             <span className="qs-item qs-weight" title="负重">
-              ⚖️ {weight}/{caravan?.maxCarryWeight}kg
+              ⚖️ {weight}/{caravan?.maxCarryWeight}
               <span className="qs-minibar weight-bar"><span style={{ width: `${Math.min(100, weightPercent)}%` }}></span></span>
             </span>
             <span className="qs-item qs-rep" title="声望">⭐ {caravan?.reputation || 0}</span>
             <span className="qs-item qs-merc" title="佣兵">⚔️ {caravan?.mercenaries?.length || 0}</span>
             <span className="qs-item qs-quest" title="任务">📜 {acceptedQuests?.length || 0}/3</span>
-            <span className="qs-item qs-inv" title="货物">📦 {inventoryCount}</span>
+            <span className="qs-item qs-inv" title="货物件数">📦 {inventoryCount}</span>
             {currentWeather && (
               <span className="qs-item qs-weather" title={`${currentWeather.name}: ${currentWeather.description}`}>
                 {currentWeather.icon} {currentWeather.name}
               </span>
             )}
           </div>
-          <button onClick={handleNewGame} title="新建游戏">🌟</button>
-          <button onClick={handleSaveGame} title="保存游戏">💾</button>
-          <button onClick={() => setShowRecords(true)} title="游戏记录">📜</button>
-          <button onClick={handleLogout} title="退出">🚪</button>
+          <button onClick={handleNewGame} title="新建游戏">🌟 新档</button>
+          <button onClick={handleSaveGame} title="保存游戏">💾 保存</button>
+          <button onClick={() => setShowRecords(true)} title="游戏记录">📜 存档</button>
+          <button onClick={handleLogout} title="退出登录">🚪 退出</button>
         </div>
       </header>
 
-      <div className="new-main-container">
+      <div className="new-main-container v2">
         <aside className="sidebar-nav">
           {SIDEBAR_TABS.map(tab => {
             if (tab.requires === 'hasBlackMarket' && !currentCity?.hasBlackMarket) {
               return null;
             }
-            const isActive = activeSidebarTab === tab.id;
+            const isActive = activeModalTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -817,8 +842,41 @@ function GameApp() {
           })}
         </aside>
 
-        <main className="main-content-area">
-          <div className="map-wrapper">
+        <main className="main-content-area v2">
+          <div className="summary-cards top-cards">
+            <div className="summary-card sc-city">
+              <div className="sc-label">📍 当前</div>
+              <div className="sc-value">{currentCity?.name || '—'}</div>
+              <div className="sc-sub">{currentCity?.description || ''}</div>
+            </div>
+            {selectedDestination && (
+              <div className="summary-card sc-dest highlight">
+                <div className="sc-label">🎯 目的地</div>
+                <div className="sc-value">
+                  → {connectedCities.find(c => c.id === selectedDestination)?.name || '—'}
+                </div>
+                <div className="sc-sub">
+                  {(() => {
+                    const dest = connectedCities.find(c => c.id === selectedDestination);
+                    if (!dest?.travel) return '';
+                    const t = dest.travel;
+                    return `${t.distance}km · 体力-${t.staminaCost} · 💧${t.waterCost} 🍞${t.foodCost} ⛽${t.fuelCost}`;
+                  })()}
+                </div>
+              </div>
+            )}
+            {acceptedQuests?.slice(0, 2).map(q => (
+              <div key={q.id} className="summary-card sc-quest">
+                <div className="sc-label">📜 {q.title?.slice(0, 10) || '任务'}</div>
+                <div className="sc-value small">
+                  {q.currentStage === 'delivered' || q.currentStage === 'returning' ? '✅ 可交付' : `进行中·${q.currentStage}`}
+                </div>
+                <div className="sc-sub">💰{q.reward?.money || 0} ⭐{q.reward?.reputation || 0}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="map-wrapper v2">
             <GameMap
               cities={allCities}
               connections={allConnections}
@@ -828,45 +886,24 @@ function GameApp() {
               selectedDestination={selectedDestination}
             />
           </div>
-
-          <div className="summary-cards">
-            <div className="summary-card sc-city">
-              <div className="sc-label">📍 当前位置</div>
-              <div className="sc-value">{currentCity?.name || '—'}</div>
-              <div className="sc-sub">{currentCity?.description || ''}</div>
-            </div>
-            {selectedDestination && (
-              <div className="summary-card sc-dest highlight">
-                <div className="sc-label">🎯 选定目的地</div>
-                <div className="sc-value">
-                  → {connectedCities.find(c => c.id === selectedDestination)?.name || '—'}
-                </div>
-                <div className="sc-sub">
-                  {(() => {
-                    const dest = connectedCities.find(c => c.id === selectedDestination);
-                    if (!dest?.travel) return '';
-                    const t = dest.travel;
-                    return `距离${t.distance}km · 体力-${t.staminaCost} · 💧${t.waterCost} 🍞${t.foodCost} ⛽${t.fuelCost}`;
-                  })()}
-                </div>
-              </div>
-            )}
-            {acceptedQuests?.slice(0, 2).map(q => (
-              <div key={q.id} className="summary-card sc-quest">
-                <div className="sc-label">📜 {q.title?.slice(0, 12) || '任务'}</div>
-                <div className="sc-value small">
-                  {q.currentStage === 'delivered' || q.currentStage === 'returning' ? '✅ 可交付' : `进行中·${q.currentStage}`}
-                </div>
-                <div className="sc-sub">奖励: {q.reward?.money || 0}💰 {q.reward?.reputation || 0}⭐</div>
-              </div>
-            ))}
-          </div>
         </main>
-
-        <aside className="sidebar-panel">
-          {renderSidebarContent()}
-        </aside>
       </div>
+
+      {activeModalTab && (
+        <div className="modal-overlay center-modal" onClick={closeModalTab}>
+          <div className="modal center-modal-box" onClick={e => e.stopPropagation()}>
+            <div className="modal-header center-modal-header">
+              <h3>
+                {modalLabel?.icon} {modalLabel?.title}
+              </h3>
+              <button className="modal-close" onClick={closeModalTab} title="关闭">×</button>
+            </div>
+            <div className="center-modal-body">
+              {renderModalContent()}
+            </div>
+          </div>
+        </div>
+      )}
 
       <EventModal
         event={activeEvent}
