@@ -16,42 +16,10 @@ function AdminPanel({ onBack }) {
   const [editingItem, setEditingItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  if (!isAdmin) {
-    return (
-      <div className="admin-panel">
-        <div className="admin-header">
-          <button className="back-button" onClick={onBack}>
-            ← 返回游戏
-          </button>
-          <h2>🎛️ 后台管理系统</h2>
-        </div>
-        <div className="auth-error" style={{ marginTop: '2rem' }}>
-          您没有管理员权限，无法访问此页面
-        </div>
-      </div>
-    );
-  }
-
   const showMessage = (text, type = 'success') => {
     setMessage({ text, type });
     setTimeout(() => setMessage(null), 3000);
   };
-
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'goods') {
-      loadGoods();
-    } else if (activeTab === 'cities') {
-      loadCities();
-    } else if (activeTab === 'events') {
-      loadEvents();
-    } else if (activeTab === 'users') {
-      loadUsers();
-    }
-  }, [activeTab]);
 
   const loadStats = async () => {
     try {
@@ -110,6 +78,38 @@ function AdminPanel({ onBack }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'goods') {
+      loadGoods();
+    } else if (activeTab === 'cities') {
+      loadCities();
+    } else if (activeTab === 'events') {
+      loadEvents();
+    } else if (activeTab === 'users') {
+      loadUsers();
+    }
+  }, [activeTab]);
+
+  if (!isAdmin) {
+    return (
+      <div className="admin-panel">
+        <div className="admin-header">
+          <button className="back-button" onClick={onBack}>
+            ← 返回游戏
+          </button>
+          <h2>🎛️ 后台管理系统</h2>
+        </div>
+        <div className="auth-error" style={{ marginTop: '2rem' }}>
+          您没有管理员权限，无法访问此页面
+        </div>
+      </div>
+    );
+  }
 
   const handleAddGood = async (goodData) => {
     try {

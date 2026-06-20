@@ -83,10 +83,10 @@ function DestinationsPanel({
 
         <div className="action-row">
           <button className="btn btn-success btn-sm" onClick={onRest}>
-            🏨 休整 (50💰 + 🍞x3 + 💧x3)
+            🏨 休整 (30💰 + 🍞x2 + 💧x2)
           </button>
           <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#a0a0a0' }}>
-            消耗：50金币、干粮x3、净水x3 &nbsp;|&nbsp; 恢复：体力+50
+            消耗：30金币、干粮x2、净水x2 &nbsp;|&nbsp; 恢复：体力+60
           </div>
         </div>
 

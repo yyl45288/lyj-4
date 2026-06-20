@@ -720,10 +720,10 @@ function calculateTravelCost(fromCityId, toCityId, connections) {
     return null;
   }
 
-  const staminaCost = Math.round(connection.distance * 0.15);
-  const fuelCost = Math.round(connection.distance * 0.05);
-  const waterCost = Math.round(connection.distance * 0.03);
-  const foodCost = Math.round(connection.distance * 0.02);
+  const staminaCost = Math.max(1, Math.round(connection.distance * 0.08));
+  const fuelCost = Math.max(0, Math.round(connection.distance * 0.025));
+  const waterCost = Math.max(0, Math.round(connection.distance * 0.015));
+  const foodCost = Math.max(0, Math.round(connection.distance * 0.01));
   const danger = connection.danger;
 
   return {

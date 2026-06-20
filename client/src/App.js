@@ -16,6 +16,17 @@ import AdminPanel from './components/AdminPanel';
 import RecordsModal from './components/RecordsModal';
 import QuestsPanel from './components/QuestsPanel';
 
+const SIDEBAR_TABS = [
+  { id: 'travel', icon: '🚗', label: '出发旅行', desc: '选择目的地并出发' },
+  { id: 'trade', icon: '🏪', label: '市场交易', desc: '买卖常规货物' },
+  { id: 'blackmarket', icon: '🌑', label: '黑市', desc: '稀有和非法交易', requires: 'hasBlackMarket' },
+  { id: 'mercenary', icon: '⚔️', label: '佣兵', desc: '雇佣或解雇佣兵' },
+  { id: 'quests', icon: '📜', label: '委托任务', desc: '接取和完成任务' },
+  { id: 'inventory', icon: '🎒', label: '物品背包', desc: '查看货物和状态' },
+  { id: 'log', icon: '📋', label: '交易日志', desc: '查看历史交易记录' },
+  { id: 'stats', icon: '📊', label: '统计', desc: '资金变化图表' },
+];
+
 function GameApp() {
   const { user, logout, isAdmin } = useAuth();
   const [view, setView] = useState('game');
@@ -41,8 +52,6 @@ function GameApp() {
   const [showNewGame, setShowNewGame] = useState(false);
   const [checkingRecord, setCheckingRecord] = useState(true);
   const [blackMarketPrices, setBlackMarketPrices] = useState({});
-  const [showBlackMarket, setShowBlackMarket] = useState(false);
-  const [showMercenary, setShowMercenary] = useState(false);
   const [availableMercenaries, setAvailableMercenaries] = useState([]);
   const [hiredMercenaries, setHiredMercenaries] = useState([]);
   const [currentWeather, setCurrentWeather] = useState(null);
@@ -50,6 +59,8 @@ function GameApp() {
   const [availableQuests, setAvailableQuests] = useState([]);
   const [acceptedQuests, setAcceptedQuests] = useState([]);
   const [questMessage, setQuestMessage] = useState(null);
+
+  const [activeSidebarTab, setActiveSidebarTab] = useState('travel');
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -110,7 +121,7 @@ function GameApp() {
     };
 
     loadLatestRecordIfExists();
-  }, [user, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, isAdmin]);
 
   const showMessage = useCallback((text, type = 'success') => {
     setMessage({ text, type });
@@ -134,6 +145,7 @@ function GameApp() {
     setAcceptedQuests(gameData.acceptedQuests || []);
     setGameStarted(true);
     setShowNewGame(false);
+    setActiveSidebarTab('travel');
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
   }, [showMessage]);
 
@@ -238,7 +250,7 @@ function GameApp() {
       setCaravan(result.caravan);
       setBlackMarketPrices(result.blackMarketPrices);
       setWeight(result.weight);
-      
+
       let messageText = result.message;
       if (result.blackMarketEvent) {
         messageText += ` | ${result.blackMarketEvent.name}: ${result.blackMarketEvent.description}`;
@@ -246,7 +258,7 @@ function GameApp() {
           messageText += ` | ${result.blackMarketEvent.messages.join(', ')}`;
         }
       }
-      
+
       setBlackMarketMessage({ text: messageText, type: result.blackMarketEvent ? 'error' : 'success' });
       setTimeout(() => setBlackMarketMessage(null), 5000);
     } catch (err) {
@@ -265,7 +277,7 @@ function GameApp() {
       setCaravan(result.caravan);
       setBlackMarketPrices(result.blackMarketPrices);
       setWeight(result.weight);
-      
+
       let messageText = result.message;
       if (result.blackMarketEvent) {
         messageText += ` | ${result.blackMarketEvent.name}: ${result.blackMarketEvent.description}`;
@@ -273,7 +285,7 @@ function GameApp() {
           messageText += ` | ${result.blackMarketEvent.messages.join(', ')}`;
         }
       }
-      
+
       setBlackMarketMessage({ text: messageText, type: result.blackMarketEvent ? 'error' : 'success' });
       setTimeout(() => setBlackMarketMessage(null), 5000);
     } catch (err) {
@@ -560,6 +572,7 @@ function GameApp() {
 
   const handleCityClick = useCallback((city) => {
     setSelectedDestination(city.id);
+    setActiveSidebarTab('travel');
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -583,7 +596,17 @@ function GameApp() {
     setActiveEvent(null);
     setActiveEventResult(null);
     setView('game');
+    setActiveSidebarTab('travel');
   }, [logout, gameStarted, sessionId]);
+
+  const handleSidebarTabClick = useCallback((tabId) => {
+    setActiveSidebarTab(tabId);
+    if (tabId === 'blackmarket') {
+      loadBlackMarketPrices();
+    } else if (tabId === 'mercenary') {
+      loadAvailableMercenaries();
+    }
+  }, [loadBlackMarketPrices, loadAvailableMercenaries]);
 
   if (!user) {
     return <AuthPage />;
@@ -628,135 +651,174 @@ function GameApp() {
     );
   }
 
+  const inventoryCount = Object.values(caravan?.inventory || {}).reduce((sum, v) => sum + (v || 0), 0);
+  const staminaPercent = caravan ? (caravan.stamina / caravan.maxStamina) * 100 : 0;
+  const weightPercent = caravan && caravan.maxCarryWeight ? (weight / caravan.maxCarryWeight) * 100 : 0;
+
+  const renderSidebarContent = () => {
+    switch (activeSidebarTab) {
+      case 'travel':
+        return (
+          <DestinationsPanel
+            connectedCities={connectedCities}
+            currentCity={currentCity}
+            currentWeather={currentWeather}
+            selectedDestination={selectedDestination}
+            onSelectDestination={setSelectedDestination}
+            onTravel={handleTravel}
+            onRest={handleRest}
+            caravan={caravan}
+          />
+        );
+      case 'trade':
+        return (
+          <TradePanel
+            allGoods={allGoods}
+            currentPrices={currentPrices}
+            caravan={caravan}
+            onBuy={handleBuy}
+            onSell={handleSell}
+            message={tradeMessage}
+          />
+        );
+      case 'blackmarket':
+        return currentCity?.hasBlackMarket ? (
+          <BlackMarketPanel
+            allGoods={allGoods}
+            blackMarketPrices={blackMarketPrices}
+            caravan={caravan}
+            onBuy={handleBlackMarketBuy}
+            onSell={handleBlackMarketSell}
+            message={blackMarketMessage}
+            blackMarketRisk={currentCity?.blackMarketRisk}
+          />
+        ) : (
+          <div className="panel">
+            <div className="panel-header"><h3>🌑 黑市</h3></div>
+            <div className="panel-body">
+              <div className="empty-state">当前城市没有黑市</div>
+            </div>
+          </div>
+        );
+      case 'mercenary':
+        return (
+          <MercenaryPanel
+            availableMercenaries={availableMercenaries}
+            hiredMercenaries={hiredMercenaries}
+            caravan={caravan}
+            onHire={handleHireMercenary}
+            onFire={handleFireMercenary}
+            message={mercenaryMessage}
+          />
+        );
+      case 'quests':
+        return (
+          <QuestsPanel
+            availableQuests={availableQuests || []}
+            acceptedQuests={acceptedQuests || []}
+            allGoods={allGoods || []}
+            currentCityId={caravan?.currentCityId}
+            onAccept={handleAcceptQuest}
+            onAbandon={handleAbandonQuest}
+            onRefresh={handleRefreshQuests}
+            onComplete={handleCompleteQuest}
+            loading={loading}
+          />
+        );
+      case 'inventory':
+        return (
+          <Inventory
+            caravan={caravan}
+            allGoods={allGoods}
+            weight={weight}
+          />
+        );
+      case 'log':
+        return (
+          <TradeLog tradeHistory={caravan?.tradeHistory} />
+        );
+      case 'stats':
+        return (
+          <div className="panel">
+            <div className="panel-header"><h3>📊 资金变化</h3></div>
+            <div className="panel-body">
+              <MoneyChart moneyHistory={caravan?.moneyHistory} />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="app">
-      <header className="app-header">
+    <div className="app app-new-layout">
+      <header className="app-header compact-header">
         <div>
-          <h1>🏜️ 废土商队模拟器</h1>
-          <p>
-            {caravan?.name} - 领袖: {caravan?.leader}
-            {' | '}旅行次数: {caravan?.travelCount}
-            {' | '}当前位置: {currentCity?.name || '旅途中...'}
-          </p>
+          <h1 className="compact-title">🏜️ 废土商队</h1>
+          <div className="compact-subtitle">
+            {caravan?.name} · 领袖: {caravan?.leader}
+            {' · '}旅行: {caravan?.travelCount}次
+            {' · '}📍 {currentCity?.name || '旅途中'}
+          </div>
         </div>
-        <div className="user-nav">
-          <span>👤 {user.username}</span>
-          <button onClick={handleNewGame}>🌟 新建游戏</button>
-          <button onClick={handleSaveGame}>� 保存</button>
-          <button onClick={() => setShowRecords(true)}>📜 记录</button>
-          <button onClick={handleLogout}>退出</button>
+        <div className="user-nav compact-nav">
+          <div className="quick-stats">
+            <span className="qs-item qs-money" title="金币">💰 {caravan?.money?.toLocaleString()}</span>
+            <span className="qs-item qs-stamina" title="体力">
+              ⚡ {caravan?.stamina}/{caravan?.maxStamina}
+              <span className="qs-minibar"><span style={{ width: `${staminaPercent}%` }}></span></span>
+            </span>
+            <span className="qs-item qs-weight" title="负重">
+              ⚖️ {weight}/{caravan?.maxCarryWeight}kg
+              <span className="qs-minibar weight-bar"><span style={{ width: `${Math.min(100, weightPercent)}%` }}></span></span>
+            </span>
+            <span className="qs-item qs-rep" title="声望">⭐ {caravan?.reputation || 0}</span>
+            <span className="qs-item qs-merc" title="佣兵">⚔️ {caravan?.mercenaries?.length || 0}</span>
+            <span className="qs-item qs-quest" title="任务">📜 {acceptedQuests?.length || 0}/3</span>
+            <span className="qs-item qs-inv" title="货物">📦 {inventoryCount}</span>
+            {currentWeather && (
+              <span className="qs-item qs-weather" title={`${currentWeather.name}: ${currentWeather.description}`}>
+                {currentWeather.icon} {currentWeather.name}
+              </span>
+            )}
+          </div>
+          <button onClick={handleNewGame} title="新建游戏">🌟</button>
+          <button onClick={handleSaveGame} title="保存游戏">💾</button>
+          <button onClick={() => setShowRecords(true)} title="游戏记录">📜</button>
+          <button onClick={handleLogout} title="退出">🚪</button>
         </div>
       </header>
 
-      <div className="main-game">
-        <div className="top-bar">
-          <div className="stat-card">
-            <div className="label">💰 金币</div>
-            <div className="value positive">{caravan?.money?.toLocaleString()}</div>
-          </div>
-          <div className="stat-card">
-            <div className="label">⚡ 体力</div>
-            <div className="value" style={{ color: caravan?.stamina < 30 ? '#e74c3c' : '#2ecc71' }}>
-              {caravan?.stamina}/{caravan?.maxStamina}
-            </div>
-            <div className="progress-bar">
-              <div
-                className="progress-bar-fill stamina"
-                style={{ width: `${(caravan?.stamina / caravan?.maxStamina) * 100}%` }}
-              ></div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="label">⚖️ 负重</div>
-            <div className="value" style={{ color: weight > caravan?.maxCarryWeight * 0.9 ? '#e74c3c' : '#f39c12' }}>
-              {weight}/{caravan?.maxCarryWeight} kg
-            </div>
-            <div className="progress-bar">
-              <div
-                className="progress-bar-fill weight"
-                style={{
-                  width: `${Math.min(100, (weight / caravan?.maxCarryWeight) * 100)}%`,
-                  background: weight > caravan?.maxCarryWeight * 0.9
-                    ? 'linear-gradient(90deg, #c0392b 0%, #e74c3c 100%)'
-                    : undefined
-                }}
-              ></div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="label">📍 当前城市</div>
-            <div className="value" style={{ color: '#e94560', fontSize: '1.1rem' }}>
-              {currentCity?.name || '旅途中...'}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="label">⭐ 声望</div>
-            <div className="value" style={{ color: '#f1c40f' }}>
-              {caravan?.reputation || 0}
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="label">⚔️ 佣兵</div>
-            <div className="value" style={{ color: '#3498db' }}>
-              {caravan?.mercenaries?.length || 0} 人
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="label">🌤️ 当前天气</div>
-            {currentWeather ? (
-              <>
-                <div className="value" style={{
-                  color: currentWeather.goodsDamageChance >= 0.2 ? '#e74c3c'
-                    : currentWeather.travelSpeedMultiplier <= 0.7 ? '#f39c12' : '#2ecc71',
-                  fontSize: '1.05rem',
-                  fontWeight: '700'
-                }}>
-                  {currentWeather.icon} {currentWeather.name}
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#a0a0a0', marginTop: '0.2rem', lineHeight: '1.3' }}>
-                  速度×{currentWeather.travelSpeedMultiplier}
-                  {' · '}货损{(currentWeather.goodsDamageChance * 100).toFixed(0)}%
-                </div>
-              </>
-            ) : (
-              <div className="value" style={{ color: '#888' }}>--</div>
-            )}
-          </div>
-          <div className="stat-card">
-            <div className="label">📜 任务</div>
-            <div className="value" style={{ color: acceptedQuests?.length >= 3 ? '#e74c3c' : '#9b59b6' }}>
-              {acceptedQuests?.length || 0}/3 进行中
-            </div>
-            {availableQuests?.length > 0 && (
-              <div style={{ fontSize: '0.72rem', color: '#a0a0a0', marginTop: '0.2rem' }}>
-                {availableQuests.length}个可接
-              </div>
-            )}
-          </div>
-        </div>
+      <div className="new-main-container">
+        <aside className="sidebar-nav">
+          {SIDEBAR_TABS.map(tab => {
+            if (tab.requires === 'hasBlackMarket' && !currentCity?.hasBlackMarket) {
+              return null;
+            }
+            const isActive = activeSidebarTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                className={`sidebar-tab ${isActive ? 'active' : ''}`}
+                onClick={() => handleSidebarTabClick(tab.id)}
+                title={tab.desc}
+              >
+                <span className="sidebar-tab-icon">{tab.icon}</span>
+                <span className="sidebar-tab-label">{tab.label}</span>
+                {tab.id === 'quests' && availableQuests?.length > 0 && (
+                  <span className="sidebar-tab-badge">{availableQuests.length}</span>
+                )}
+                {tab.id === 'inventory' && inventoryCount > 0 && (
+                  <span className="sidebar-tab-badge info">{inventoryCount}</span>
+                )}
+              </button>
+            );
+          })}
+        </aside>
 
-        <div className="game-layout">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <QuestsPanel
-              availableQuests={availableQuests || []}
-              acceptedQuests={acceptedQuests || []}
-              allGoods={allGoods || []}
-              currentCityId={caravan?.currentCityId}
-              onAccept={handleAcceptQuest}
-              onAbandon={handleAbandonQuest}
-              onRefresh={handleRefreshQuests}
-              onComplete={handleCompleteQuest}
-              loading={loading}
-            />
-            <Inventory
-              caravan={caravan}
-              allGoods={allGoods}
-              weight={weight}
-            />
-            <MoneyChart moneyHistory={caravan?.moneyHistory} />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <main className="main-content-area">
+          <div className="map-wrapper">
             <GameMap
               cities={allCities}
               connections={allConnections}
@@ -765,87 +827,45 @@ function GameApp() {
               onCityClick={handleCityClick}
               selectedDestination={selectedDestination}
             />
-            <TradeLog tradeHistory={caravan?.tradeHistory} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <DestinationsPanel
-              connectedCities={connectedCities}
-              currentCity={currentCity}
-              currentWeather={currentWeather}
-              selectedDestination={selectedDestination}
-              onSelectDestination={setSelectedDestination}
-              onTravel={handleTravel}
-              onRest={handleRest}
-              caravan={caravan}
-            />
-            
-            <div className="panel-tabs">
-              <button
-                className={`panel-tab ${!showBlackMarket && !showMercenary ? 'active' : ''}`}
-                onClick={() => { setShowBlackMarket(false); setShowMercenary(false); }}
-              >
-                🏪 市场
-              </button>
-              {currentCity?.hasBlackMarket && (
-                <button
-                  className={`panel-tab ${showBlackMarket ? 'active' : ''}`}
-                  onClick={() => {
-                    setShowBlackMarket(true);
-                    setShowMercenary(false);
-                    loadBlackMarketPrices();
-                  }}
-                >
-                  🌑 黑市
-                </button>
-              )}
-              <button
-                className={`panel-tab ${showMercenary ? 'active' : ''}`}
-                onClick={() => {
-                  setShowMercenary(true);
-                  setShowBlackMarket(false);
-                  loadAvailableMercenaries();
-                }}
-              >
-                ⚔️ 佣兵
-              </button>
+          <div className="summary-cards">
+            <div className="summary-card sc-city">
+              <div className="sc-label">📍 当前位置</div>
+              <div className="sc-value">{currentCity?.name || '—'}</div>
+              <div className="sc-sub">{currentCity?.description || ''}</div>
             </div>
-
-            {!showBlackMarket && !showMercenary && (
-              <TradePanel
-                allGoods={allGoods}
-                currentPrices={currentPrices}
-                caravan={caravan}
-                onBuy={handleBuy}
-                onSell={handleSell}
-                message={tradeMessage}
-              />
+            {selectedDestination && (
+              <div className="summary-card sc-dest highlight">
+                <div className="sc-label">🎯 选定目的地</div>
+                <div className="sc-value">
+                  → {connectedCities.find(c => c.id === selectedDestination)?.name || '—'}
+                </div>
+                <div className="sc-sub">
+                  {(() => {
+                    const dest = connectedCities.find(c => c.id === selectedDestination);
+                    if (!dest?.travel) return '';
+                    const t = dest.travel;
+                    return `距离${t.distance}km · 体力-${t.staminaCost} · 💧${t.waterCost} 🍞${t.foodCost} ⛽${t.fuelCost}`;
+                  })()}
+                </div>
+              </div>
             )}
-
-            {showBlackMarket && currentCity?.hasBlackMarket && (
-              <BlackMarketPanel
-                allGoods={allGoods}
-                blackMarketPrices={blackMarketPrices}
-                caravan={caravan}
-                onBuy={handleBlackMarketBuy}
-                onSell={handleBlackMarketSell}
-                message={blackMarketMessage}
-                blackMarketRisk={currentCity?.blackMarketRisk}
-              />
-            )}
-
-            {showMercenary && (
-              <MercenaryPanel
-                availableMercenaries={availableMercenaries}
-                hiredMercenaries={hiredMercenaries}
-                caravan={caravan}
-                onHire={handleHireMercenary}
-                onFire={handleFireMercenary}
-                message={mercenaryMessage}
-              />
-            )}
+            {acceptedQuests?.slice(0, 2).map(q => (
+              <div key={q.id} className="summary-card sc-quest">
+                <div className="sc-label">📜 {q.title?.slice(0, 12) || '任务'}</div>
+                <div className="sc-value small">
+                  {q.currentStage === 'delivered' || q.currentStage === 'returning' ? '✅ 可交付' : `进行中·${q.currentStage}`}
+                </div>
+                <div className="sc-sub">奖励: {q.reward?.money || 0}💰 {q.reward?.reputation || 0}⭐</div>
+              </div>
+            ))}
           </div>
-        </div>
+        </main>
+
+        <aside className="sidebar-panel">
+          {renderSidebarContent()}
+        </aside>
       </div>
 
       <EventModal
@@ -877,19 +897,16 @@ function GameApp() {
         </div>
       )}
 
+      {message && (
+        <div className={`toast-message ${message.type}`}>
+          {message.text}
+        </div>
+      )}
+
       {loading && (
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          background: 'rgba(233, 69, 96, 0.9)',
-          padding: '0.8rem 1.5rem',
-          borderRadius: '8px',
-          color: 'white',
-          fontWeight: '600',
-          boxShadow: '0 4px 20px rgba(233, 69, 96, 0.4)'
-        }}>
-          处理中...
+        <div className="loading-indicator">
+          <div className="spinner"></div>
+          <span>处理中...</span>
         </div>
       )}
     </div>

@@ -1680,7 +1680,7 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
   const cities = getCities();
   const connections = getConnections();
   const mercInfo = getMercenariesInfo();
-  const restCost = 50;
+  const restCost = 30;
 
   const hiredMercIds = game.caravan.mercenaries || [];
   const hiredMercs = mercInfo.mercenaries.filter(m => hiredMercIds.includes(m.id));
@@ -1691,8 +1691,8 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
     return res.status(400).json({ error: `休整总共需要 ${totalCost} 金币（休整费${restCost} + 佣兵工资${mercWage}）` });
   }
 
-  const foodNeeded = 3;
-  const waterNeeded = 3;
+  const foodNeeded = 2;
+  const waterNeeded = 2;
 
   if ((game.caravan.inventory['food'] || 0) < foodNeeded) {
     return res.status(400).json({ error: `休整需要 ${foodNeeded} 单位干粮` });
@@ -1705,7 +1705,7 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
   game.caravan.money -= totalCost;
   game.caravan.inventory['food'] -= foodNeeded;
   game.caravan.inventory['water'] -= waterNeeded;
-  game.caravan.stamina = Math.min(game.caravan.maxStamina, game.caravan.stamina + 50);
+  game.caravan.stamina = Math.min(game.caravan.maxStamina, game.caravan.stamina + 60);
 
   const cityInventories = cityInventoriesCache.get(sessionId);
   const currentCity = cities.find(c => c.id === game.caravan.currentCityId);
@@ -1763,7 +1763,7 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
     saveGameRecordForUser(game.userId, sessionId, game);
   }
 
-  let message = `商队休整完毕，体力恢复50点。消耗：${restCost}金币、干粮x${foodNeeded}、净水x${waterNeeded}`;
+  let message = `商队休整完毕，体力恢复60点。消耗：${restCost}金币、干粮x${foodNeeded}、净水x${waterNeeded}`;
   if (hiredMercs.length > 0) {
     message += `，佣兵工资${mercWage}金币`;
   }
