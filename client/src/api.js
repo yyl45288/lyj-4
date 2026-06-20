@@ -174,6 +174,24 @@ export const api = {
   adminGetStats: () =>
     apiCall('/api/admin/stats', 'GET', null, true),
 
+  getWeather: () =>
+    apiCall('/api/weather'),
+
+  getQuestsConfig: () =>
+    apiCall('/api/quests/config'),
+
+  acceptQuest: (sessionId, questId) =>
+    apiCall('/api/quests/accept', 'POST', { sessionId, questId }, true),
+
+  completeQuest: (sessionId, questId) =>
+    apiCall('/api/quests/complete', 'POST', { sessionId, questId }, true),
+
+  abandonQuest: (sessionId, questId) =>
+    apiCall('/api/quests/abandon', 'POST', { sessionId, questId }, true),
+
+  refreshQuests: (sessionId) =>
+    apiCall('/api/quests/refresh', 'POST', { sessionId }, true),
+
   getToken,
   setToken,
   clearToken

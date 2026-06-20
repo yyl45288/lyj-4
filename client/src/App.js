@@ -14,6 +14,7 @@ import DestinationsPanel from './components/DestinationsPanel';
 import AuthPage from './components/AuthPage';
 import AdminPanel from './components/AdminPanel';
 import RecordsModal from './components/RecordsModal';
+import QuestsPanel from './components/QuestsPanel';
 
 function GameApp() {
   const { user, logout, isAdmin } = useAuth();
@@ -44,6 +45,11 @@ function GameApp() {
   const [showMercenary, setShowMercenary] = useState(false);
   const [availableMercenaries, setAvailableMercenaries] = useState([]);
   const [hiredMercenaries, setHiredMercenaries] = useState([]);
+  const [currentWeather, setCurrentWeather] = useState(null);
+  const [cityWeather, setCityWeather] = useState({});
+  const [availableQuests, setAvailableQuests] = useState([]);
+  const [acceptedQuests, setAcceptedQuests] = useState([]);
+  const [questMessage, setQuestMessage] = useState(null);
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -88,6 +94,10 @@ function GameApp() {
           setBlackMarketPrices(result.blackMarketPrices || {});
           setAvailableMercenaries(result.availableMercenaries || []);
           setHiredMercenaries(result.hiredMercenaries || []);
+          setCurrentWeather(result.currentWeather || null);
+          setCityWeather(result.cityWeather || {});
+          setAvailableQuests(result.availableQuests || []);
+          setAcceptedQuests(result.acceptedQuests || []);
           setGameStarted(true);
           setActiveEvent(result.pendingEvent || null);
           showMessage(`已自动加载最近存档：${latestRecord.caravanName}`, 'success');
@@ -118,6 +128,10 @@ function GameApp() {
     setBlackMarketPrices(gameData.blackMarketPrices || {});
     setAvailableMercenaries(gameData.availableMercenaries || []);
     setHiredMercenaries(gameData.hiredMercenaries || []);
+    setCurrentWeather(gameData.currentWeather || null);
+    setCityWeather(gameData.cityWeather || {});
+    setAvailableQuests(gameData.availableQuests || []);
+    setAcceptedQuests(gameData.acceptedQuests || []);
     setGameStarted(true);
     setShowNewGame(false);
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
@@ -145,6 +159,10 @@ function GameApp() {
       setBlackMarketPrices(result.blackMarketPrices || {});
       setAvailableMercenaries(result.availableMercenaries || []);
       setHiredMercenaries(result.hiredMercenaries || []);
+      setCurrentWeather(result.currentWeather || null);
+      setCityWeather(result.cityWeather || {});
+      setAvailableQuests(result.availableQuests || []);
+      setAcceptedQuests(result.acceptedQuests || []);
       setGameStarted(true);
       setActiveEvent(result.pendingEvent || null);
       setShowRecords(false);
@@ -174,6 +192,8 @@ function GameApp() {
       setCaravan(result.caravan);
       setCurrentPrices(result.currentPrices);
       setWeight(result.weight);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
       showMessage(result.message, 'success');
     } catch (err) {
       showMessage(err.message, 'error');
@@ -318,12 +338,45 @@ function GameApp() {
       const result = await api.startTravel(sessionId, selectedDestination);
       setCaravan(result.caravan);
       setWeight(result.weight);
-      
+
       if (result.hiredMercenaries) {
         setHiredMercenaries(result.hiredMercenaries);
       }
       if (result.availableMercenaries) {
         setAvailableMercenaries(result.availableMercenaries);
+      }
+      if (result.currentWeather) {
+        setCurrentWeather(result.currentWeather);
+      }
+      if (result.cityWeather) {
+        setCityWeather(result.cityWeather);
+      }
+      if (result.availableQuests) {
+        setAvailableQuests(result.availableQuests);
+      }
+      if (result.acceptedQuests) {
+        setAcceptedQuests(result.acceptedQuests);
+      }
+
+      let travelMessages = [];
+      if (result.weatherDamage && result.weatherDamage.damaged) {
+        const damagedCount = result.weatherDamage.damagedItems?.length || 0;
+        travelMessages.push(`🌧️ 天气货损${damagedCount}件`);
+      }
+      if (result.questStatusChanges && result.questStatusChanges.length > 0) {
+        result.questStatusChanges.forEach(qc => {
+          travelMessages.push(`📜 任务阶段: ${qc.currentStage}`);
+        });
+      }
+      if (result.completedQuests && result.completedQuests.length > 0) {
+        result.completedQuests.forEach(cq => {
+          travelMessages.push(`🎉 任务完成：+${cq.rewards?.money || 0}💰 +${cq.rewards?.reputation || 0}⭐`);
+        });
+      }
+      if (result.failedQuests && result.failedQuests.length > 0) {
+        result.failedQuests.forEach(fq => {
+          travelMessages.push(`💥 任务失败：${fq.failureReason || '未知原因'}`);
+        });
       }
 
       if (result.eventOccurred && result.event && result.event.hasChoices) {
@@ -338,9 +391,13 @@ function GameApp() {
           setSelectedDestination(null);
         }
         if (result.eventOccurred && result.eventResult) {
-          showMessage(`${result.event.name}：${result.eventResult.join(' | ')}`, 'success');
+          travelMessages.push(`${result.event.name}：${result.eventResult.join(' | ')}`);
+          showMessage(travelMessages.join(' | '), travelMessages.some(m => m.includes('完成')) ? 'success' : travelMessages.some(m => m.includes('失败') || m.includes('货损')) ? 'error' : 'success');
         } else if (result.currentCity) {
-          showMessage(`安全抵达「${result.currentCity.name}」！市场价格已更新。`, 'success');
+          travelMessages.unshift(`安全抵达「${result.currentCity.name}」！`);
+          showMessage(travelMessages.join(' | '), travelMessages.some(m => m.includes('完成')) ? 'success' : travelMessages.some(m => m.includes('失败') || m.includes('货损')) ? 'error' : 'success');
+        } else if (travelMessages.length > 0) {
+          showMessage(travelMessages.join(' | '), 'success');
         }
       }
     } catch (err) {
@@ -363,14 +420,31 @@ function GameApp() {
       setBlackMarketPrices(result.blackMarketPrices || {});
       setAvailableMercenaries(result.availableMercenaries || []);
       setHiredMercenaries(result.hiredMercenaries || []);
+      if (result.currentWeather) setCurrentWeather(result.currentWeather);
+      if (result.cityWeather) setCityWeather(result.cityWeather);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
       setActiveEvent(null);
       setActiveEventResult(null);
       setSelectedDestination(null);
 
+      let msgs = [];
+      if (result.weatherDamage?.damaged) {
+        msgs.push(`🌧️ 天气货损${result.weatherDamage.damagedItems?.length || 0}件`);
+      }
+      if (result.completedQuests?.length > 0) {
+        result.completedQuests.forEach(cq => msgs.push(`🎉 +${cq.rewards?.money || 0}💰 +${cq.rewards?.reputation || 0}⭐`));
+      }
+      if (result.failedQuests?.length > 0) {
+        result.failedQuests.forEach(fq => msgs.push(`💥 任务失败`));
+      }
       if (result.messages && result.messages.length > 0) {
-        showMessage(result.messages.join(' | '), 'success');
+        msgs.push(result.messages.join(' | '));
       } else if (result.currentCity) {
-        showMessage(`抵达「${result.currentCity.name}」！`, 'success');
+        msgs.unshift(`抵达「${result.currentCity.name}」！`);
+      }
+      if (msgs.length > 0) {
+        showMessage(msgs.join(' | '), msgs.some(m => m.includes('失败')) ? 'error' : 'success');
       }
     } catch (err) {
       showMessage(err.message, 'error');
@@ -392,7 +466,91 @@ function GameApp() {
       setWeight(result.weight);
       setAvailableMercenaries(result.availableMercenaries || []);
       setHiredMercenaries(result.hiredMercenaries || []);
+      if (result.currentWeather) setCurrentWeather(result.currentWeather);
+      if (result.cityWeather) setCityWeather(result.cityWeather);
+      if (result.connectedCities) setConnectedCities(result.connectedCities);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
+
+      let msgs = [result.message || '休整完成'];
+      if (result.expiredQuests?.length > 0) {
+        msgs.push(`⌛ ${result.expiredQuests.length}个任务超时`);
+      }
+      if (result.questsRefreshInfo?.newQuestsCount > 0) {
+        msgs.push(`📜 新发布${result.questsRefreshInfo.newQuestsCount}个委托`);
+      }
+      showMessage(msgs.join(' | '), msgs.some(m => m.includes('超时')) ? 'error' : 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, showMessage]);
+
+  const handleAcceptQuest = useCallback(async (questId) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.acceptQuest(sessionId, questId);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
+      setQuestMessage({ text: result.message, type: 'success' });
+      setTimeout(() => setQuestMessage(null), 3000);
       showMessage(result.message, 'success');
+    } catch (err) {
+      setQuestMessage({ text: err.message, type: 'error' });
+      setTimeout(() => setQuestMessage(null), 3000);
+      showMessage(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, showMessage]);
+
+  const handleAbandonQuest = useCallback(async (questId) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.abandonQuest(sessionId, questId);
+      setCaravan(result.caravan);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
+      showMessage(result.message || '已放弃任务', 'error');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, showMessage]);
+
+  const handleRefreshQuests = useCallback(async () => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.refreshQuests(sessionId);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
+      const info = result.questsRefreshInfo || {};
+      showMessage(`任务刷新：过期${info.expiredCount || 0}个，新增${info.newQuestsCount || 0}个`, 'success');
+    } catch (err) {
+      showMessage(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, showMessage]);
+
+  const handleCompleteQuest = useCallback(async (questId) => {
+    if (!sessionId) return;
+    setLoading(true);
+    try {
+      const result = await api.completeQuest(sessionId, questId);
+      setCaravan(result.caravan);
+      if (result.availableQuests) setAvailableQuests(result.availableQuests);
+      if (result.acceptedQuests) setAcceptedQuests(result.acceptedQuests);
+      if (result.quest?.reward) {
+        showMessage(`🎉 ${result.message}：+${result.quest.reward.money || 0}💰 +${result.quest.reward.reputation || 0}⭐`, 'success');
+      } else {
+        showMessage(result.message || '任务完成！', 'success');
+      }
     } catch (err) {
       showMessage(err.message, 'error');
     } finally {
@@ -543,10 +701,53 @@ function GameApp() {
               {caravan?.mercenaries?.length || 0} 人
             </div>
           </div>
+          <div className="stat-card">
+            <div className="label">🌤️ 当前天气</div>
+            {currentWeather ? (
+              <>
+                <div className="value" style={{
+                  color: currentWeather.goodsDamageChance >= 0.2 ? '#e74c3c'
+                    : currentWeather.travelSpeedMultiplier <= 0.7 ? '#f39c12' : '#2ecc71',
+                  fontSize: '1.05rem',
+                  fontWeight: '700'
+                }}>
+                  {currentWeather.icon} {currentWeather.name}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#a0a0a0', marginTop: '0.2rem', lineHeight: '1.3' }}>
+                  速度×{currentWeather.travelSpeedMultiplier}
+                  {' · '}货损{(currentWeather.goodsDamageChance * 100).toFixed(0)}%
+                </div>
+              </>
+            ) : (
+              <div className="value" style={{ color: '#888' }}>--</div>
+            )}
+          </div>
+          <div className="stat-card">
+            <div className="label">📜 任务</div>
+            <div className="value" style={{ color: acceptedQuests?.length >= 3 ? '#e74c3c' : '#9b59b6' }}>
+              {acceptedQuests?.length || 0}/3 进行中
+            </div>
+            {availableQuests?.length > 0 && (
+              <div style={{ fontSize: '0.72rem', color: '#a0a0a0', marginTop: '0.2rem' }}>
+                {availableQuests.length}个可接
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="game-layout">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <QuestsPanel
+              availableQuests={availableQuests || []}
+              acceptedQuests={acceptedQuests || []}
+              allGoods={allGoods || []}
+              currentCityId={caravan?.currentCityId}
+              onAccept={handleAcceptQuest}
+              onAbandon={handleAbandonQuest}
+              onRefresh={handleRefreshQuests}
+              onComplete={handleCompleteQuest}
+              loading={loading}
+            />
             <Inventory
               caravan={caravan}
               allGoods={allGoods}
@@ -571,6 +772,7 @@ function GameApp() {
             <DestinationsPanel
               connectedCities={connectedCities}
               currentCity={currentCity}
+              currentWeather={currentWeather}
               selectedDestination={selectedDestination}
               onSelectDestination={setSelectedDestination}
               onTravel={handleTravel}
