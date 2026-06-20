@@ -3,6 +3,8 @@ const { goods: defaultGoods } = require('./goods');
 const { cities: defaultCities, connections: defaultConnections } = require('./cities');
 const { events: defaultEvents } = require('./events');
 const { mercenaries: defaultMercenaries, cityMercenaryAvailability } = require('./mercenaries');
+const { weatherTypes: defaultWeatherTypes, regionWeatherBiases } = require('./weather');
+const { questTemplates, QUEST_STATUS, MAX_ACTIVE_QUESTS_PER_CITY, MAX_ACCEPTED_QUESTS } = require('./quests');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { ADMIN_USERNAME } = require('../middleware/auth');
@@ -91,6 +93,22 @@ function getMercenariesData() {
   };
 }
 
+function getWeatherData() {
+  return {
+    weatherTypes: defaultWeatherTypes,
+    regionWeatherBiases
+  };
+}
+
+function getQuestsConfig() {
+  return {
+    questTemplates,
+    QUEST_STATUS,
+    MAX_ACTIVE_QUESTS_PER_CITY,
+    MAX_ACCEPTED_QUESTS
+  };
+}
+
 function initAllData() {
   store.initDataDir();
   initGoods();
@@ -106,5 +124,7 @@ module.exports = {
   getGoodsData,
   getCitiesData,
   getEventsData,
-  getMercenariesData
+  getMercenariesData,
+  getWeatherData,
+  getQuestsConfig
 };

@@ -30,5 +30,61 @@
     "role": "user",
     "createdAt": 1781850276667,
     "updatedAt": 1781850276667
+  },
+  {
+    "id": "9e117408-76db-4d80-8f81-063239ddd41e",
+    "username": "test_9644",
+    "password": "$2b$10$8Bbi0Q1td4FjzmATeNHOwe/WY/fhMyyREWaZMcDJOQ1joELTxOg3G",
+    "role": "user",
+    "createdAt": 1781886316689,
+    "updatedAt": 1781886316689
+  },
+  {
+    "id": "c4d2c95e-20d3-4b50-ab95-0472582935af",
+    "username": "t_8937",
+    "password": "$2b$10$E.JYyyFZ.WqkcrB7N8iCnewoKfk9.ozNplPZrJvhTUF39mDkGn/6W",
+    "role": "user",
+    "createdAt": 1781886354180,
+    "updatedAt": 1781886354180
+  },
+  {
+    "id": "4ce7381d-7dee-43fb-beac-8979db0d224b",
+    "username": "d_4230",
+    "password": "$2b$10$bw3QF9pyGv.0K39f.j8Sh.eGshV0I9HIJtuG2Hf6ee71GzSGmL2WO",
+    "role": "user",
+    "createdAt": 1781886448941,
+    "updatedAt": 1781886448941
+  },
+  {
+    "id": "bf9a7a6c-1567-4908-a4a7-5329b306f0bf",
+    "username": "e_7447",
+    "password": "$2b$10$bGuQaYAYaFj/uEsweOnorejqXCv6tBLTSVq/sAbRCYD95Pdb8Weku",
+    "role": "user",
+    "createdAt": 1781886500100,
+    "updatedAt": 1781886500100
+  },
+  {
+    "id": "f2451004-2b93-4396-a2e0-258267442bca",
+    "username": "f_8767",
+    "password": "$2b$10$1NQjbB3BGFAQLsfMu15rz.ifZdUVwejtqCn1/6npodTvOu1YY3q5u",
+    "role": "user",
+    "createdAt": 1781886546101,
+    "updatedAt": 1781886546101
+  },
+  {
+    "id": "1bb609c3-e267-4c72-b48b-c8fb0a038466",
+    "username": "g_7256",
+    "password": "$2b$10$97VuOAM2ZZ5TJHx.SWiaieMSsRXv0TNDuiKyXglKJLuip3QAnmkjW",
+    "role": "user",
+    "createdAt": 1781886754130,
+    "updatedAt": 1781886754130
+  },
+  {
+    "id": "ce616a8e-8c14-4999-b433-a5f28142f6f7",
+    "username": "h_4857",
+    "password": "$2b$10$hfANrPoWjx2Tr5ijkhUkru8dhIoKte55KBvDOOHghww.P7rfD.31S",
+    "role": "user",
+    "createdAt": 1781886816022,
+    "updatedAt": 1781886816022
   }
 ]

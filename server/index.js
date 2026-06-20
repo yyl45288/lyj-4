@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { initAllData, getGoodsData, getCitiesData, getEventsData, getMercenariesData } = require('./data/initData');
+const { initAllData, getGoodsData, getCitiesData, getEventsData, getMercenariesData, getWeatherData, getQuestsConfig } = require('./data/initData');
 const store = require('./data/store');
 const { authMiddleware } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
@@ -21,8 +21,22 @@ const {
   simulateMarketFluctuation,
   getAvailableMercenaries,
   calculateMercenaryWage,
-  getMercenaryEffects
+  getMercenaryEffects,
+  generateWeatherForCity,
+  generateWeatherForRoute,
+  calculateTravelCostWithWeather,
+  calculateGoodsDamage,
+  rollRandomEventWithWeather,
+  generateCityQuests,
+  acceptQuest,
+  updateQuestProgress,
+  checkQuestFailure,
+  canCompleteQuest,
+  completeQuest,
+  failQuest,
+  refreshExpiredQuests
 } = require('./game/gameLogic');
+const { QUEST_STATUS, MAX_ACCEPTED_QUESTS } = require('./data/quests');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +50,72 @@ const gameSessions = new Map();
 const cityInventoriesCache = new Map();
 const cityPricesCache = new Map();
 const blackMarketPricesCache = new Map();
+const cityWeatherCache = new Map();
+const routeWeatherCache = new Map();
+const questsCache = new Map();
+
+function getCitiesWeather(sessionId) {
+  if (!cityWeatherCache.has(sessionId)) {
+    const cities = getCities();
+    const weather = {};
+    cities.forEach(city => {
+      weather[city.id] = generateWeatherForCity(city.id);
+    });
+    cityWeatherCache.set(sessionId, weather);
+  }
+  return cityWeatherCache.get(sessionId);
+}
+
+function getOrCreateQuests(sessionId) {
+  if (!questsCache.has(sessionId)) {
+    const cities = getCities();
+    const goods = getGoods();
+    let allQuests = [];
+    cities.forEach(city => {
+      const cityQuests = generateCityQuests(city.id, cities, goods, allQuests);
+      allQuests = [...allQuests, ...cityQuests];
+    });
+    questsCache.set(sessionId, allQuests);
+  }
+  return questsCache.get(sessionId);
+}
+
+function refreshCityQuests(sessionId, cityId) {
+  const quests = getOrCreateQuests(sessionId);
+  const { active, expiredCount } = refreshExpiredQuests(quests);
+  const cities = getCities();
+  const goods = getGoods();
+  const newQuests = generateCityQuests(cityId, cities, goods, active);
+  const updatedQuests = [...active, ...newQuests];
+  questsCache.set(sessionId, updatedQuests);
+  return { quests: updatedQuests, expiredCount, newQuestsCount: newQuests.length };
+}
+
+function getCityQuests(sessionId, cityId, includeAccepted = true) {
+  const quests = getOrCreateQuests(sessionId);
+  const { active } = refreshExpiredQuests(quests);
+  questsCache.set(sessionId, active);
+  
+  return active.filter(q => {
+    if (q.cityId !== cityId && q.status !== QUEST_STATUS.ACCEPTED) return false;
+    if (!includeAccepted && q.status === QUEST_STATUS.ACCEPTED) return false;
+    return true;
+  });
+}
+
+function getAcceptedQuests(sessionId) {
+  const quests = getOrCreateQuests(sessionId);
+  return quests.filter(q => q.status === QUEST_STATUS.ACCEPTED);
+}
+
+function updateQuestById(sessionId, questId, updateFn) {
+  const quests = getOrCreateQuests(sessionId);
+  const index = quests.findIndex(q => q.id === questId);
+  if (index === -1) return null;
+  quests[index] = updateFn(quests[index]);
+  questsCache.set(sessionId, quests);
+  return quests[index];
+}
 
 function verifyGameSession(req, res, next) {
   const { sessionId } = req.body;
@@ -53,6 +133,15 @@ function verifyGameSession(req, res, next) {
         }
         if (record.cityPrices) {
           cityPricesCache.set(sessionId, record.cityPrices);
+        }
+        if (record.blackMarketPrices) {
+          blackMarketPricesCache.set(sessionId, record.blackMarketPrices);
+        }
+        if (record.cityWeather) {
+          cityWeatherCache.set(sessionId, record.cityWeather);
+        }
+        if (record.quests) {
+          questsCache.set(sessionId, record.quests);
         }
         req.game = record;
         return next();
@@ -158,11 +247,15 @@ function saveGameRecordForUser(userId, sessionId, game) {
   const cityInventories = cityInventoriesCache.get(sessionId);
   const cityPrices = cityPricesCache.get(sessionId);
   const blackMarketPrices = blackMarketPricesCache.get(sessionId);
+  const cityWeather = cityWeatherCache.get(sessionId);
+  const quests = questsCache.get(sessionId);
   const record = {
     ...game,
     cityInventories,
     cityPrices,
     blackMarketPrices,
+    cityWeather,
+    quests,
     updatedAt: Date.now()
   };
   store.saveGameRecord(userId, sessionId, record);
@@ -194,6 +287,19 @@ app.get('/api/events', (req, res) => {
 app.get('/api/mercenaries', (req, res) => {
   const mercData = getMercenariesInfo();
   res.json({ mercenaries: mercData.mercenaries, cityAvailability: mercData.cityAvailability });
+});
+
+app.get('/api/weather', (req, res) => {
+  const weatherData = getWeatherData();
+  res.json({ 
+    weatherTypes: weatherData.weatherTypes, 
+    regionWeatherBiases: weatherData.regionWeatherBiases 
+  });
+});
+
+app.get('/api/quests/config', (req, res) => {
+  const questsConfig = getQuestsConfig();
+  res.json(questsConfig);
 });
 
 app.post('/api/game/create', authMiddleware, (req, res) => {
@@ -248,10 +354,31 @@ app.post('/api/game/create', authMiddleware, (req, res) => {
   cityInventoriesCache.set(sessionId, getInitialCityInventories());
   cityPricesCache.set(sessionId, {});
   blackMarketPricesCache.set(sessionId, {});
+  cityWeatherCache.set(sessionId, {});
+  questsCache.set(sessionId, []);
+
+  const cityWeather = getCitiesWeather(sessionId);
+  const startWeather = cityWeather[startCityId];
+  const questsRefresh = refreshCityQuests(sessionId, startCityId);
+  const cityQuests = getCityQuests(sessionId, startCityId);
+  const acceptedQuests = getAcceptedQuests(sessionId);
+
+  const connectedCitiesWithWeather = connections
+    .filter(c => c.from === startCityId || c.to === startCityId)
+    .map(c => {
+      const toCityId = c.from === startCityId ? c.to : c.from;
+      const destCity = cities.find(city => city.id === toCityId);
+      const routeWeather = generateWeatherForRoute(startCityId, toCityId, startWeather);
+      const travel = calculateTravelCostWithWeather(startCityId, toCityId, connections, routeWeather);
+      return {
+        ...destCity,
+        travel,
+        routeWeather
+      };
+    });
 
   const cityInventories = cityInventoriesCache.get(sessionId);
   const currentPrices = getOrCreateCityPrices(sessionId, startCityId, cityInventories[startCityId], startCity, goods);
-  const connectedCities = getConnectedCities(startCityId, cities, connections);
   const availableMercenaries = getAvailableMercenaries(startCityId, getMercenariesInfo().mercenaries, getMercenariesInfo().cityAvailability);
   const blackMarketPrices = startCity.hasBlackMarket 
     ? getOrCreateBlackMarketPrices(sessionId, startCityId, cityInventories[startCityId], startCity, goods) 
@@ -265,14 +392,22 @@ app.post('/api/game/create', authMiddleware, (req, res) => {
     currentCity: startCity,
     currentPrices,
     blackMarketPrices,
-    connectedCities,
+    connectedCities: connectedCitiesWithWeather,
     weight: calculateCaravanWeight(caravan.inventory, goods),
     allGoods: goods,
     hasBlackMarket: startCity.hasBlackMarket || false,
     blackMarketRisk: startCity.blackMarketRisk || 0,
     availableMercenaries,
     hiredMercenaries: [],
-    mercenaryWage: 0
+    mercenaryWage: 0,
+    currentWeather: startWeather,
+    cityWeather,
+    availableQuests: cityQuests.filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests,
+    questsRefreshInfo: {
+      expiredCount: questsRefresh.expiredCount,
+      newQuestsCount: questsRefresh.newQuestsCount
+    }
   });
 });
 
@@ -295,6 +430,16 @@ app.post('/api/game/load', authMiddleware, (req, res) => {
   if (record.blackMarketPrices) {
     blackMarketPricesCache.set(recordId, record.blackMarketPrices);
   }
+  if (record.cityWeather) {
+    cityWeatherCache.set(recordId, record.cityWeather);
+  } else {
+    cityWeatherCache.set(recordId, {});
+  }
+  if (record.quests) {
+    questsCache.set(recordId, record.quests);
+  } else {
+    questsCache.set(recordId, []);
+  }
 
   const cities = getCities();
   const goods = getGoods();
@@ -305,7 +450,26 @@ app.post('/api/game/load', authMiddleware, (req, res) => {
   const blackMarketPrices = currentCity.hasBlackMarket 
     ? getOrCreateBlackMarketPrices(recordId, currentCity.id, cityInventories[currentCity.id], currentCity, goods) 
     : {};
-  const connectedCities = getConnectedCities(currentCity.id, cities, connections);
+
+  const cityWeather = getCitiesWeather(recordId);
+  const currentWeather = cityWeather[currentCity.id];
+  const questsRefresh = refreshCityQuests(recordId, currentCity.id);
+  const cityQuests = getCityQuests(recordId, currentCity.id);
+  const acceptedQuests = getAcceptedQuests(recordId);
+
+  const connectedCitiesWithWeather = connections
+    .filter(c => c.from === currentCity.id || c.to === currentCity.id)
+    .map(c => {
+      const toCityId = c.from === currentCity.id ? c.to : c.from;
+      const destCity = cities.find(city => city.id === toCityId);
+      const routeWeather = generateWeatherForRoute(currentCity.id, toCityId, currentWeather);
+      const travel = calculateTravelCostWithWeather(currentCity.id, toCityId, connections, routeWeather);
+      return {
+        ...destCity,
+        travel,
+        routeWeather
+      };
+    });
   
   const mercInfo = getMercenariesInfo();
   const availableMercenaries = getAvailableMercenaries(currentCity.id, mercInfo.mercenaries, mercInfo.cityAvailability);
@@ -318,7 +482,7 @@ app.post('/api/game/load', authMiddleware, (req, res) => {
     currentCity,
     currentPrices,
     blackMarketPrices,
-    connectedCities,
+    connectedCities: connectedCitiesWithWeather,
     weight: calculateCaravanWeight(record.caravan.inventory, goods),
     allGoods: goods,
     pendingEvent: record.pendingEvent,
@@ -326,7 +490,15 @@ app.post('/api/game/load', authMiddleware, (req, res) => {
     blackMarketRisk: currentCity.blackMarketRisk || 0,
     availableMercenaries,
     hiredMercenaries: hiredMercs,
-    mercenaryWage: mercWage
+    mercenaryWage: mercWage,
+    currentWeather,
+    cityWeather,
+    availableQuests: cityQuests.filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests,
+    questsRefreshInfo: {
+      expiredCount: questsRefresh.expiredCount,
+      newQuestsCount: questsRefresh.newQuestsCount
+    }
   });
 });
 
@@ -352,19 +524,60 @@ app.post('/api/game/state', authMiddleware, verifyGameSession, (req, res) => {
   const blackMarketPrices = currentCity.hasBlackMarket 
     ? getOrCreateBlackMarketPrices(sessionId, currentCity.id, cityInventories[currentCity.id], currentCity, goods) 
     : {};
-  const connectedCities = getConnectedCities(currentCity.id, cities, connections);
+
+  const cityWeather = getCitiesWeather(sessionId);
+  const currentWeather = cityWeather[currentCity.id];
+  const questsRefresh = refreshCityQuests(sessionId, currentCity.id);
+  const cityQuests = getCityQuests(sessionId, currentCity.id);
+  const acceptedQuests = getAcceptedQuests(sessionId);
+
+  const acceptedQuestsUpdates = [];
+  const questMessages = [];
+  acceptedQuests.forEach(q => {
+    const failureCheck = checkQuestFailure(q, game.caravan, currentCity.id);
+    if (failureCheck.failed) {
+      const failResult = failQuest(q, game.caravan, failureCheck.reason);
+      updateQuestById(sessionId, q.id, () => failResult.quest);
+      game.caravan.money = failResult.caravanUpdates.money;
+      game.caravan.reputation = failResult.caravanUpdates.reputation;
+      questMessages.push(`任务「${q.title}」失败：${failureCheck.message}`);
+      questMessages.push(...failResult.messages);
+      acceptedQuestsUpdates.push(failResult.quest);
+    }
+  });
+
+  const connectedCitiesWithWeather = connections
+    .filter(c => c.from === currentCity.id || c.to === currentCity.id)
+    .map(c => {
+      const toCityId = c.from === currentCity.id ? c.to : c.from;
+      const destCity = cities.find(city => city.id === toCityId);
+      const routeWeather = generateWeatherForRoute(currentCity.id, toCityId, currentWeather);
+      const travel = calculateTravelCostWithWeather(currentCity.id, toCityId, connections, routeWeather);
+      return {
+        ...destCity,
+        travel,
+        routeWeather
+      };
+    });
   
   const mercInfo = getMercenariesInfo();
   const availableMercenaries = getAvailableMercenaries(currentCity.id, mercInfo.mercenaries, mercInfo.cityAvailability);
   const hiredMercs = getHiredMercenaries(game);
   const mercWage = calculateMercenaryWage(hiredMercs);
 
+  if (questMessages.length > 0) {
+    game.updatedAt = Date.now();
+    if (game.userId) {
+      saveGameRecordForUser(game.userId, sessionId, game);
+    }
+  }
+
   res.json({
     caravan: game.caravan,
     currentCity,
     currentPrices,
     blackMarketPrices,
-    connectedCities,
+    connectedCities: connectedCitiesWithWeather,
     weight: calculateCaravanWeight(game.caravan.inventory, goods),
     pendingEvent: game.pendingEvent,
     allGoods: goods,
@@ -372,7 +585,16 @@ app.post('/api/game/state', authMiddleware, verifyGameSession, (req, res) => {
     blackMarketRisk: currentCity.blackMarketRisk || 0,
     availableMercenaries,
     hiredMercenaries: hiredMercs,
-    mercenaryWage: mercWage
+    mercenaryWage: mercWage,
+    currentWeather,
+    cityWeather,
+    availableQuests: cityQuests.filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests: getAcceptedQuests(sessionId),
+    questsRefreshInfo: {
+      expiredCount: questsRefresh.expiredCount,
+      newQuestsCount: questsRefresh.newQuestsCount
+    },
+    questMessages
   });
 });
 
@@ -429,6 +651,14 @@ app.post('/api/trade/buy', authMiddleware, verifyGameSession, (req, res) => {
     amount,
     true
   );
+
+  const acceptedQuestsBefore = getAcceptedQuests(sessionId);
+  acceptedQuestsBefore.forEach(q => {
+    const result = updateQuestProgress(q, game.caravan, game.caravan.currentCityId, 'buy_goods', { goodId, amount });
+    if (result.updated) {
+      updateQuestById(sessionId, q.id, () => result.quest);
+    }
+  });
 
   game.caravan.tradeHistory.push({
     id: uuidv4(),
@@ -930,14 +1160,18 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
     return res.status(400).json({ error: '请先处理当前事件' });
   }
 
-  const travelCost = calculateTravelCost(game.caravan.currentCityId, toCityId, connections);
+  const fromCityId = game.caravan.currentCityId;
+  const cityWeather = getCitiesWeather(sessionId);
+  const fromWeather = cityWeather[fromCityId];
+  const routeWeather = generateWeatherForRoute(fromCityId, toCityId, fromWeather);
+  const travelCost = calculateTravelCostWithWeather(fromCityId, toCityId, connections, routeWeather);
 
   if (!travelCost) {
     return res.status(400).json({ error: '无法到达该城市' });
   }
 
   if (game.caravan.stamina < travelCost.staminaCost) {
-    return res.status(400).json({ error: '体力不足，无法出发。请在城市休整恢复体力。' });
+    return res.status(400).json({ error: `体力不足，无法出发。请在城市休整恢复体力。需要：${travelCost.staminaCost} 体力` });
   }
 
   if ((game.caravan.inventory['water'] || 0) < travelCost.waterCost) {
@@ -960,6 +1194,16 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
     return res.status(400).json({ error: `金币不足，无法支付佣兵工资！本次旅行佣兵工资为 ${totalWage} 金币` });
   }
 
+  const acceptedQuestsTravel = getAcceptedQuests(sessionId);
+  const questDepartUpdates = [];
+  acceptedQuestsTravel.forEach(q => {
+    const result = updateQuestProgress(q, game.caravan, fromCityId, 'depart_city');
+    if (result.updated) {
+      updateQuestById(sessionId, q.id, () => result.quest);
+      questDepartUpdates.push(result.quest);
+    }
+  });
+
   game.caravan.stamina -= travelCost.staminaCost;
   game.caravan.inventory['water'] -= travelCost.waterCost;
   game.caravan.inventory['food'] -= travelCost.foodCost;
@@ -967,11 +1211,42 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
   game.caravan.money -= totalWage;
   game.caravan.travelCount += 1;
 
+  const goodsDamageResult = calculateGoodsDamage(game.caravan.inventory, goods, routeWeather, hiredMercs);
+  if (Object.keys(goodsDamageResult.damaged).length > 0) {
+    Object.entries(goodsDamageResult.damaged).forEach(([goodId, amount]) => {
+      game.caravan.inventory[goodId] = Math.max(0, (game.caravan.inventory[goodId] || 0) - amount);
+    });
+  }
+
   const newCityInventories = simulateMarketFluctuation(cityInventoriesCache.get(sessionId), goods);
   cityInventoriesCache.set(sessionId, newCityInventories);
   invalidateAllCityPrices(sessionId);
 
-  const randomEvent = rollRandomEvent(travelCost.danger, events, hiredMercs);
+  const randomEvent = rollRandomEventWithWeather(travelCost.danger, events, hiredMercs, routeWeather);
+
+  const travelMessages = [...goodsDamageResult.messages];
+  if (routeWeather.id !== 'clear' && routeWeather.id !== 'cloudy') {
+    travelMessages.unshift(`${routeWeather.icon} 途中遭遇${routeWeather.name}天气！`);
+  }
+
+  const questFailures = [];
+  const acceptedQuestsAfterDamage = getAcceptedQuests(sessionId);
+  acceptedQuestsAfterDamage.forEach(q => {
+    const failureCheck = checkQuestFailure(q, game.caravan, toCityId);
+    if (failureCheck.failed) {
+      const failResult = failQuest(q, game.caravan, failureCheck.reason);
+      updateQuestById(sessionId, q.id, () => failResult.quest);
+      game.caravan.money = failResult.caravanUpdates.money;
+      game.caravan.reputation = failResult.caravanUpdates.reputation;
+      questFailures.push({
+        quest: failResult.quest,
+        messages: [
+          `任务「${q.title}」失败：${failureCheck.message}`,
+          ...failResult.messages
+        ]
+      });
+    }
+  });
 
   if (randomEvent) {
     if (randomEvent.hasChoices) {
@@ -979,6 +1254,7 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
         ...randomEvent,
         toCityId,
         travelCost,
+        routeWeather,
         needsResolution: true
       };
     } else {
@@ -988,6 +1264,58 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
       game.caravan.stamina = eventResult.caravanUpdates.stamina;
       game.caravan.reputation = eventResult.caravanUpdates.reputation;
       game.caravan.currentCityId = toCityId;
+
+      cityWeather[toCityId] = generateWeatherForCity(toCityId, fromWeather.id);
+      cityWeatherCache.set(sessionId, cityWeather);
+
+      const arrivedCity = cities.find(c => c.id === toCityId);
+      const questsRefreshResult = refreshCityQuests(sessionId, toCityId);
+
+      const acceptedQuestsArrive = getAcceptedQuests(sessionId);
+      const questArriveMessages = [];
+      acceptedQuestsArrive.forEach(q => {
+        if (q.status === QUEST_STATUS.ACCEPTED) {
+          const result = updateQuestProgress(q, game.caravan, toCityId, 'arrive_city');
+          if (result.updated) {
+            updateQuestById(sessionId, q.id, () => result.quest);
+          }
+        }
+      });
+
+      const questCompleteMessages = [];
+      const completedQuests = [];
+      acceptedQuestsArrive.forEach(q => {
+        if (q.status === QUEST_STATUS.ACCEPTED) {
+          const check = canCompleteQuest(q, game.caravan, toCityId);
+          if (check.canComplete) {
+            const completeResult = completeQuest(q, game.caravan, goods);
+            if (completeResult.success) {
+              updateQuestById(sessionId, q.id, () => completeResult.quest);
+              game.caravan.money = completeResult.caravanUpdates.money;
+              game.caravan.inventory = completeResult.caravanUpdates.inventory;
+              game.caravan.reputation = completeResult.caravanUpdates.reputation;
+              completedQuests.push(completeResult.quest);
+              questCompleteMessages.push(`任务「${q.title}」完成！`);
+              questCompleteMessages.push(...completeResult.messages);
+            }
+          }
+        }
+      });
+
+      game.caravan.tradeHistory.push({
+        id: uuidv4(),
+        type: 'travel',
+        fromCityId,
+        toCityId,
+        weather: routeWeather,
+        travelCost,
+        goodsDamage: goodsDamageResult.damaged,
+        eventName: randomEvent ? randomEvent.name : null,
+        eventResult: eventResult.messages,
+        questFailures: questFailures.map(qf => ({ questId: qf.quest.id, title: qf.quest.title })),
+        questCompletions: completedQuests.map(cq => ({ questId: cq.id, title: cq.title })),
+        time: Date.now()
+      });
 
       game.caravan.tradeHistory.push({
         id: uuidv4(),
@@ -1004,12 +1332,25 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
         money: game.caravan.money
       });
 
-      const arrivedCity = cities.find(c => c.id === toCityId);
       const arrivedPrices = getOrCreateCityPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods);
       const blackMarketPrices = arrivedCity.hasBlackMarket 
         ? getOrCreateBlackMarketPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods) 
         : {};
-      const connectedCities = getConnectedCities(toCityId, cities, connections);
+
+      const toWeather = cityWeather[toCityId];
+      const connectedCitiesWithWeather = connections
+        .filter(c => c.from === toCityId || c.to === toCityId)
+        .map(c => {
+          const connToCityId = c.from === toCityId ? c.to : c.from;
+          const destCity = cities.find(city => city.id === connToCityId);
+          const nextRouteWeather = generateWeatherForRoute(toCityId, connToCityId, toWeather);
+          const nextTravel = calculateTravelCostWithWeather(toCityId, connToCityId, connections, nextRouteWeather);
+          return {
+            ...destCity,
+            travel: nextTravel,
+            routeWeather: nextRouteWeather
+          };
+        });
       
       const availableMercenaries = getAvailableMercenaries(toCityId, mercInfo.mercenaries, mercInfo.cityAvailability);
       const newHiredMercs = mercInfo.mercenaries.filter(m => (game.caravan.mercenaries || []).includes(m.id));
@@ -1025,16 +1366,30 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
         eventOccurred: true,
         event: randomEvent,
         eventResult: eventResult.messages,
+        travelMessages,
         caravan: game.caravan,
         currentCity: arrivedCity,
         currentPrices: arrivedPrices,
         blackMarketPrices,
-        connectedCities,
+        connectedCities: connectedCitiesWithWeather,
         weight: calculateCaravanWeight(game.caravan.inventory, goods),
         hasBlackMarket: arrivedCity.hasBlackMarket || false,
         availableMercenaries,
         hiredMercenaries: newHiredMercs,
-        mercenaryWage: mercWage
+        mercenaryWage: mercWage,
+        routeWeather,
+        currentWeather: toWeather,
+        cityWeather,
+        goodsDamage: goodsDamageResult.damaged,
+        questFailures,
+        completedQuests,
+        questCompleteMessages,
+        availableQuests: getCityQuests(sessionId, toCityId).filter(q => q.status === QUEST_STATUS.AVAILABLE),
+        acceptedQuests: getAcceptedQuests(sessionId),
+        questsRefreshInfo: {
+          expiredCount: questsRefreshResult.expiredCount,
+          newQuestsCount: questsRefreshResult.newQuestsCount
+        }
       });
       return;
     }
@@ -1042,16 +1397,83 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
 
   if (!game.pendingEvent) {
     game.caravan.currentCityId = toCityId;
+    cityWeather[toCityId] = generateWeatherForCity(toCityId, fromWeather.id);
+    cityWeatherCache.set(sessionId, cityWeather);
   }
 
   const arrivedCity = cities.find(c => c.id === toCityId);
-  const arrivedPrices = getOrCreateCityPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods);
-  const blackMarketPrices = arrivedCity.hasBlackMarket 
-    ? getOrCreateBlackMarketPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods) 
-    : {};
-  const connectedCities = getConnectedCities(toCityId, cities, connections);
-  
-  const availableMercenaries = getAvailableMercenaries(toCityId, mercInfo.mercenaries, mercInfo.cityAvailability);
+  const questsRefreshResult = refreshCityQuests(sessionId, toCityId);
+
+  const acceptedQuestsArrive = getAcceptedQuests(sessionId);
+  acceptedQuestsArrive.forEach(q => {
+    if (q.status === QUEST_STATUS.ACCEPTED && !game.pendingEvent) {
+      const result = updateQuestProgress(q, game.caravan, toCityId, 'arrive_city');
+      if (result.updated) {
+        updateQuestById(sessionId, q.id, () => result.quest);
+      }
+    }
+  });
+
+  const questCompleteMessages = [];
+  const completedQuests = [];
+  if (!game.pendingEvent) {
+    acceptedQuestsArrive.forEach(q => {
+      if (q.status === QUEST_STATUS.ACCEPTED) {
+        const check = canCompleteQuest(q, game.caravan, toCityId);
+        if (check.canComplete) {
+          const completeResult = completeQuest(q, game.caravan, goods);
+          if (completeResult.success) {
+            updateQuestById(sessionId, q.id, () => completeResult.quest);
+            game.caravan.money = completeResult.caravanUpdates.money;
+            game.caravan.inventory = completeResult.caravanUpdates.inventory;
+            game.caravan.reputation = completeResult.caravanUpdates.reputation;
+            completedQuests.push(completeResult.quest);
+            questCompleteMessages.push(`任务「${q.title}」完成！`);
+            questCompleteMessages.push(...completeResult.messages);
+          }
+        }
+      }
+    });
+  }
+
+  game.caravan.tradeHistory.push({
+    id: uuidv4(),
+    type: 'travel',
+    fromCityId,
+    toCityId,
+    weather: routeWeather,
+    travelCost,
+    goodsDamage: goodsDamageResult.damaged,
+    questFailures: questFailures.map(qf => ({ questId: qf.quest.id, title: qf.quest.title })),
+    questCompletions: completedQuests.map(cq => ({ questId: cq.id, title: cq.title })),
+    time: Date.now()
+  });
+
+  game.caravan.moneyHistory.push({
+    time: game.caravan.tradeHistory.length,
+    money: game.caravan.money
+  });
+
+  const arrivedPrices = game.pendingEvent ? null : getOrCreateCityPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods);
+  const blackMarketPrices = (game.pendingEvent || !arrivedCity.hasBlackMarket) ? {} : 
+    getOrCreateBlackMarketPrices(sessionId, toCityId, newCityInventories[toCityId], arrivedCity, goods);
+
+  const toWeather = cityWeather[toCityId];
+  const connectedCitiesWithWeather = game.pendingEvent ? null : connections
+    .filter(c => c.from === toCityId || c.to === toCityId)
+    .map(c => {
+      const connToCityId = c.from === toCityId ? c.to : c.from;
+      const destCity = cities.find(city => city.id === connToCityId);
+      const nextRouteWeather = generateWeatherForRoute(toCityId, connToCityId, toWeather);
+      const nextTravel = calculateTravelCostWithWeather(toCityId, connToCityId, connections, nextRouteWeather);
+      return {
+        ...destCity,
+        travel: nextTravel,
+        routeWeather: nextRouteWeather
+      };
+    });
+
+  const availableMercenaries = game.pendingEvent ? null : getAvailableMercenaries(toCityId, mercInfo.mercenaries, mercInfo.cityAvailability);
   const newHiredMercs = mercInfo.mercenaries.filter(m => (game.caravan.mercenaries || []).includes(m.id));
   const mercWage = calculateMercenaryWage(newHiredMercs);
 
@@ -1064,16 +1486,30 @@ app.post('/api/travel/start', authMiddleware, verifyGameSession, (req, res) => {
     success: true,
     eventOccurred: !!game.pendingEvent,
     event: game.pendingEvent || null,
+    travelMessages,
     caravan: game.caravan,
     currentCity: game.pendingEvent ? null : arrivedCity,
-    currentPrices: game.pendingEvent ? null : arrivedPrices,
-    blackMarketPrices: game.pendingEvent ? null : blackMarketPrices,
-    connectedCities: game.pendingEvent ? null : connectedCities,
+    currentPrices: arrivedPrices,
+    blackMarketPrices,
+    connectedCities: connectedCitiesWithWeather,
     weight: calculateCaravanWeight(game.caravan.inventory, goods),
     hasBlackMarket: game.pendingEvent ? false : (arrivedCity.hasBlackMarket || false),
-    availableMercenaries: game.pendingEvent ? null : availableMercenaries,
+    availableMercenaries,
     hiredMercenaries: game.pendingEvent ? null : newHiredMercs,
-    mercenaryWage: game.pendingEvent ? null : mercWage
+    mercenaryWage: game.pendingEvent ? null : mercWage,
+    routeWeather,
+    currentWeather: toWeather,
+    cityWeather,
+    goodsDamage: goodsDamageResult.damaged,
+    questFailures,
+    completedQuests,
+    questCompleteMessages,
+    availableQuests: game.pendingEvent ? null : getCityQuests(sessionId, toCityId).filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests: getAcceptedQuests(sessionId),
+    questsRefreshInfo: {
+      expiredCount: questsRefreshResult.expiredCount,
+      newQuestsCount: questsRefreshResult.newQuestsCount
+    }
   });
 });
 
@@ -1105,6 +1541,64 @@ app.post('/api/event/resolve', authMiddleware, verifyGameSession, (req, res) => 
   game.caravan.currentCityId = targetCityId;
   game.pendingEvent = null;
 
+  const cityWeather = getCitiesWeather(sessionId);
+  const fromCityId = Object.keys(cityWeather).find(k => true) || targetCityId;
+  cityWeather[targetCityId] = generateWeatherForCity(targetCityId, cityWeather[fromCityId]?.id);
+  cityWeatherCache.set(sessionId, cityWeather);
+
+  const questsRefreshResult = refreshCityQuests(sessionId, targetCityId);
+
+  const acceptedQuestsArrive = getAcceptedQuests(sessionId);
+  acceptedQuestsArrive.forEach(q => {
+    if (q.status === QUEST_STATUS.ACCEPTED) {
+      const result = updateQuestProgress(q, game.caravan, targetCityId, 'arrive_city');
+      if (result.updated) {
+        updateQuestById(sessionId, q.id, () => result.quest);
+      }
+    }
+  });
+
+  const questFailures = [];
+  acceptedQuestsArrive.forEach(q => {
+    if (q.status === QUEST_STATUS.ACCEPTED) {
+      const failureCheck = checkQuestFailure(q, game.caravan, targetCityId);
+      if (failureCheck.failed) {
+        const failResult = failQuest(q, game.caravan, failureCheck.reason);
+        updateQuestById(sessionId, q.id, () => failResult.quest);
+        game.caravan.money = failResult.caravanUpdates.money;
+        game.caravan.reputation = failResult.caravanUpdates.reputation;
+        questFailures.push({
+          quest: failResult.quest,
+          messages: [
+            `任务「${q.title}」失败：${failureCheck.message}`,
+            ...failResult.messages
+          ]
+        });
+      }
+    }
+  });
+
+  const questCompleteMessages = [];
+  const completedQuests = [];
+  const updatedAccepted = getAcceptedQuests(sessionId);
+  updatedAccepted.forEach(q => {
+    if (q.status === QUEST_STATUS.ACCEPTED) {
+      const check = canCompleteQuest(q, game.caravan, targetCityId);
+      if (check.canComplete) {
+        const completeResult = completeQuest(q, game.caravan, goods);
+        if (completeResult.success) {
+          updateQuestById(sessionId, q.id, () => completeResult.quest);
+          game.caravan.money = completeResult.caravanUpdates.money;
+          game.caravan.inventory = completeResult.caravanUpdates.inventory;
+          game.caravan.reputation = completeResult.caravanUpdates.reputation;
+          completedQuests.push(completeResult.quest);
+          questCompleteMessages.push(`任务「${q.title}」完成！`);
+          questCompleteMessages.push(...completeResult.messages);
+        }
+      }
+    }
+  });
+
   game.caravan.tradeHistory.push({
     id: uuidv4(),
     type: 'event',
@@ -1127,7 +1621,21 @@ app.post('/api/event/resolve', authMiddleware, verifyGameSession, (req, res) => 
   const blackMarketPrices = arrivedCity.hasBlackMarket 
     ? getOrCreateBlackMarketPrices(sessionId, targetCityId, cityInventories[targetCityId], arrivedCity, goods) 
     : {};
-  const connectedCities = getConnectedCities(targetCityId, cities, connections);
+
+  const toWeather = cityWeather[targetCityId];
+  const connectedCitiesWithWeather = connections
+    .filter(c => c.from === targetCityId || c.to === targetCityId)
+    .map(c => {
+      const connToCityId = c.from === targetCityId ? c.to : c.from;
+      const destCity = cities.find(city => city.id === connToCityId);
+      const nextRouteWeather = generateWeatherForRoute(targetCityId, connToCityId, toWeather);
+      const nextTravel = calculateTravelCostWithWeather(targetCityId, connToCityId, connections, nextRouteWeather);
+      return {
+        ...destCity,
+        travel: nextTravel,
+        routeWeather: nextRouteWeather
+      };
+    });
   
   const availableMercenaries = getAvailableMercenaries(targetCityId, mercInfo.mercenaries, mercInfo.cityAvailability);
   const currentHiredMercs = mercInfo.mercenaries.filter(m => (game.caravan.mercenaries || []).includes(m.id));
@@ -1145,12 +1653,23 @@ app.post('/api/event/resolve', authMiddleware, verifyGameSession, (req, res) => 
     currentCity: arrivedCity,
     currentPrices: arrivedPrices,
     blackMarketPrices,
-    connectedCities,
+    connectedCities: connectedCitiesWithWeather,
     weight: calculateCaravanWeight(game.caravan.inventory, goods),
     hasBlackMarket: arrivedCity.hasBlackMarket || false,
     availableMercenaries,
     hiredMercenaries: currentHiredMercs,
-    mercenaryWage: mercWage
+    mercenaryWage: mercWage,
+    currentWeather: toWeather,
+    cityWeather,
+    questFailures,
+    completedQuests,
+    questCompleteMessages,
+    availableQuests: getCityQuests(sessionId, targetCityId).filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests: getAcceptedQuests(sessionId),
+    questsRefreshInfo: {
+      expiredCount: questsRefreshResult.expiredCount,
+      newQuestsCount: questsRefreshResult.newQuestsCount
+    }
   });
 });
 
@@ -1159,6 +1678,7 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
   const game = req.game;
   const goods = getGoods();
   const cities = getCities();
+  const connections = getConnections();
   const mercInfo = getMercenariesInfo();
   const restCost = 50;
 
@@ -1196,6 +1716,48 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
   
   const availableMercenaries = getAvailableMercenaries(game.caravan.currentCityId, mercInfo.mercenaries, mercInfo.cityAvailability);
 
+  const cityWeather = getCitiesWeather(sessionId);
+  const currentWeather = cityWeather[game.caravan.currentCityId];
+  cityWeather[game.caravan.currentCityId] = generateWeatherForCity(
+    game.caravan.currentCityId, 
+    currentWeather?.id
+  );
+  cityWeatherCache.set(sessionId, cityWeather);
+  const updatedWeather = cityWeather[game.caravan.currentCityId];
+
+  const questsRefreshResult = refreshCityQuests(sessionId, game.caravan.currentCityId);
+  const cityQuests = getCityQuests(sessionId, game.caravan.currentCityId);
+  const acceptedQuests = getAcceptedQuests(sessionId);
+
+  const questMessages = [];
+  acceptedQuests.forEach(q => {
+    const failureCheck = checkQuestFailure(q, game.caravan, game.caravan.currentCityId);
+    if (failureCheck.failed) {
+      const failResult = failQuest(q, game.caravan, failureCheck.reason);
+      updateQuestById(sessionId, q.id, () => failResult.quest);
+      game.caravan.money = failResult.caravanUpdates.money;
+      game.caravan.reputation = failResult.caravanUpdates.reputation;
+      questMessages.push(`任务「${q.title}」失败：${failureCheck.message}`);
+      questMessages.push(...failResult.messages);
+    }
+  });
+
+  const updatedAccepted = getAcceptedQuests(sessionId);
+
+  const connectedCitiesWithWeather = connections
+    .filter(c => c.from === game.caravan.currentCityId || c.to === game.caravan.currentCityId)
+    .map(c => {
+      const toCityId = c.from === game.caravan.currentCityId ? c.to : c.from;
+      const destCity = cities.find(city => city.id === toCityId);
+      const routeWeather = generateWeatherForRoute(game.caravan.currentCityId, toCityId, updatedWeather);
+      const travel = calculateTravelCostWithWeather(game.caravan.currentCityId, toCityId, connections, routeWeather);
+      return {
+        ...destCity,
+        travel,
+        routeWeather
+      };
+    });
+
   game.updatedAt = Date.now();
   if (game.userId) {
     saveGameRecordForUser(game.userId, sessionId, game);
@@ -1205,17 +1767,223 @@ app.post('/api/rest', authMiddleware, verifyGameSession, (req, res) => {
   if (hiredMercs.length > 0) {
     message += `，佣兵工资${mercWage}金币`;
   }
+  if (currentWeather?.id !== updatedWeather?.id) {
+    message += ` | 天气转为 ${updatedWeather.icon}${updatedWeather.name}`;
+  }
 
   res.json({
     success: true,
     caravan: game.caravan,
     currentPrices,
     blackMarketPrices,
+    connectedCities: connectedCitiesWithWeather,
     weight: calculateCaravanWeight(game.caravan.inventory, goods),
     message,
     availableMercenaries,
     hiredMercenaries: hiredMercs,
-    mercenaryWage: mercWage
+    mercenaryWage: mercWage,
+    currentWeather: updatedWeather,
+    cityWeather,
+    availableQuests: cityQuests.filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests: updatedAccepted,
+    questsRefreshInfo: {
+      expiredCount: questsRefreshResult.expiredCount,
+      newQuestsCount: questsRefreshResult.newQuestsCount
+    },
+    questMessages
+  });
+});
+
+app.post('/api/quests/accept', authMiddleware, verifyGameSession, (req, res) => {
+  const { sessionId, questId } = req.body;
+  const game = req.game;
+
+  if (!questId) {
+    return res.status(400).json({ error: '缺少任务ID' });
+  }
+
+  const quests = getOrCreateQuests(sessionId);
+  const quest = quests.find(q => q.id === questId);
+
+  if (!quest) {
+    return res.status(404).json({ error: '任务不存在' });
+  }
+
+  if (quest.status !== QUEST_STATUS.AVAILABLE) {
+    return res.status(400).json({ error: '该任务不可接取' });
+  }
+
+  if (quest.cityId !== game.caravan.currentCityId) {
+    return res.status(400).json({ error: '只能接取当前城市的任务' });
+  }
+
+  const acceptedCount = quests.filter(q => q.status === QUEST_STATUS.ACCEPTED).length;
+  if (acceptedCount >= MAX_ACCEPTED_QUESTS) {
+    return res.status(400).json({ error: `最多只能同时接取 ${MAX_ACCEPTED_QUESTS} 个任务` });
+  }
+
+  const result = acceptQuest(quest, game.caravan);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  updateQuestById(sessionId, questId, () => result.quest);
+
+  game.caravan.tradeHistory.push({
+    id: uuidv4(),
+    type: 'quest_accept',
+    questId: result.quest.id,
+    questTitle: result.quest.title,
+    cityId: game.caravan.currentCityId,
+    time: Date.now()
+  });
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
+
+  res.json({
+    success: true,
+    message: `成功接取任务：${result.quest.title}`,
+    quest: result.quest,
+    acceptedQuests: getAcceptedQuests(sessionId),
+    availableQuests: getCityQuests(sessionId, game.caravan.currentCityId).filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    caravan: game.caravan
+  });
+});
+
+app.post('/api/quests/complete', authMiddleware, verifyGameSession, (req, res) => {
+  const { sessionId, questId } = req.body;
+  const game = req.game;
+  const goods = getGoods();
+
+  if (!questId) {
+    return res.status(400).json({ error: '缺少任务ID' });
+  }
+
+  const quests = getOrCreateQuests(sessionId);
+  const quest = quests.find(q => q.id === questId);
+
+  if (!quest) {
+    return res.status(404).json({ error: '任务不存在' });
+  }
+
+  if (quest.status !== QUEST_STATUS.ACCEPTED) {
+    return res.status(400).json({ error: '该任务状态无法完成' });
+  }
+
+  const check = canCompleteQuest(quest, game.caravan, game.caravan.currentCityId);
+  if (!check.canComplete) {
+    let errorMsg = check.reason;
+    if (check.missingGood && check.missingAmount) {
+      const good = goods.find(g => g.id === check.missingGood);
+      errorMsg = `缺少 ${good?.name || check.missingGood} ${check.missingAmount} 单位`;
+    }
+    return res.status(400).json({ error: errorMsg });
+  }
+
+  const result = completeQuest(quest, game.caravan, goods);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  updateQuestById(sessionId, questId, () => result.quest);
+
+  game.caravan.money = result.caravanUpdates.money;
+  game.caravan.inventory = result.caravanUpdates.inventory;
+  game.caravan.reputation = result.caravanUpdates.reputation;
+
+  game.caravan.tradeHistory.push({
+    id: uuidv4(),
+    type: 'quest_complete',
+    questId: result.quest.id,
+    questTitle: result.quest.title,
+    reward: quest.reward,
+    messages: result.messages,
+    cityId: game.caravan.currentCityId,
+    time: Date.now()
+  });
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
+
+  res.json({
+    success: true,
+    message: `任务完成：${result.quest.title}`,
+    quest: result.quest,
+    completedQuest: result.quest,
+    questMessages: result.messages,
+    acceptedQuests: getAcceptedQuests(sessionId),
+    caravan: game.caravan
+  });
+});
+
+app.post('/api/quests/abandon', authMiddleware, verifyGameSession, (req, res) => {
+  const { sessionId, questId } = req.body;
+  const game = req.game;
+
+  if (!questId) {
+    return res.status(400).json({ error: '缺少任务ID' });
+  }
+
+  const quests = getOrCreateQuests(sessionId);
+  const quest = quests.find(q => q.id === questId);
+
+  if (!quest) {
+    return res.status(404).json({ error: '任务不存在' });
+  }
+
+  if (quest.status !== QUEST_STATUS.ACCEPTED) {
+    return res.status(400).json({ error: '该任务不可放弃' });
+  }
+
+  const failResult = failQuest(quest, game.caravan, 'abandoned');
+  updateQuestById(sessionId, questId, () => failResult.quest);
+
+  game.caravan.money = failResult.caravanUpdates.money;
+  game.caravan.reputation = failResult.caravanUpdates.reputation;
+
+  game.caravan.tradeHistory.push({
+    id: uuidv4(),
+    type: 'quest_abandon',
+    questId: quest.id,
+    questTitle: quest.title,
+    messages: failResult.messages,
+    cityId: game.caravan.currentCityId,
+    time: Date.now()
+  });
+
+  game.updatedAt = Date.now();
+  if (game.userId) {
+    saveGameRecordForUser(game.userId, sessionId, game);
+  }
+
+  res.json({
+    success: true,
+    message: `已放弃任务：${quest.title}`,
+    quest: failResult.quest,
+    questMessages: failResult.messages,
+    acceptedQuests: getAcceptedQuests(sessionId),
+    caravan: game.caravan
+  });
+});
+
+app.post('/api/quests/refresh', authMiddleware, verifyGameSession, (req, res) => {
+  const { sessionId } = req.body;
+  const game = req.game;
+
+  const result = refreshCityQuests(sessionId, game.caravan.currentCityId);
+
+  res.json({
+    success: true,
+    message: `任务列表已刷新，${result.expiredCount} 个任务过期，新增 ${result.newQuestsCount} 个任务`,
+    availableQuests: getCityQuests(sessionId, game.caravan.currentCityId).filter(q => q.status === QUEST_STATUS.AVAILABLE),
+    acceptedQuests: getAcceptedQuests(sessionId),
+    expiredCount: result.expiredCount,
+    newQuestsCount: result.newQuestsCount
   });
 });
 
