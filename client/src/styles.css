@@ -2007,6 +2007,7 @@ body {
   gap: 0.6rem;
   min-height: 0;
   overflow: hidden;
+  justify-content: flex-start;
 }
 
 .summary-cards.top-cards {
@@ -2064,8 +2065,10 @@ body {
 }
 
 .map-wrapper.v2 {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
+  max-height: 50vh;
+  height: 50vh;
   display: flex;
   background: linear-gradient(135deg, rgba(15, 25, 45, 0.95), rgba(20, 40, 70, 0.92));
   border: 1px solid #3a506b;
@@ -2080,10 +2083,23 @@ body {
 }
 
 /* 顶部导航精简按钮文字 */
+.compact-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .compact-nav > button {
   padding: 0.35rem 0.7rem;
   font-size: 0.82rem;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .compact-title {
@@ -2097,69 +2113,87 @@ body {
   margin-top: 0.15rem;
 }
 
-/* ===== 居中弹窗 ===== */
-.modal-overlay.center-modal {
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal.center-modal-box {
-  width: min(960px, 92vw);
-  max-height: 88vh;
+/* ===== 中央内嵌功能面板（替代弹窗） ===== */
+.center-panel {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: linear-gradient(135deg, rgba(27, 38, 59, 0.95), rgba(20, 30, 48, 0.95));
+  border: 1px solid #3a506b;
+  border-radius: 10px;
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-  animation: modalZoomIn 0.18s ease-out;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  animation: panelFadeIn 0.16s ease-out;
 }
 
-@keyframes modalZoomIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+@keyframes panelFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.center-modal-header {
+.center-panel-header {
   flex-shrink: 0;
-  padding: 0.9rem 1.2rem;
+  padding: 0.8rem 1.1rem;
   border-bottom: 1px solid #3a506b;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.8rem;
+  background: rgba(15, 25, 45, 0.6);
 }
 
-.center-modal-header h3 {
+.center-panel-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.center-panel-back {
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  background: rgba(233, 69, 96, 0.15);
+  border: 1px solid #e94560;
+  color: #e94560;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.center-panel-back:hover {
+  background: #e94560;
   color: #fff;
 }
 
-.center-modal-body {
+.center-panel-body {
   flex: 1 1 auto;
   overflow-y: auto;
   padding: 1rem 1.2rem;
+  min-height: 0;
 }
 
-.center-modal-body .panel {
+.center-panel-body .panel {
   border: none;
   box-shadow: none;
   padding: 0;
   background: transparent;
 }
 
-.center-modal-body .panel-header {
+.center-panel-body .panel-header {
   padding: 0 0 0.6rem 0;
 }
 
-.center-modal-body .panel-body {
+.center-panel-body .panel-body {
   padding: 0;
 }
 
-.center-modal-body .trade-grid {
+.center-panel-body .trade-grid {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
@@ -2205,12 +2239,7 @@ body {
     min-width: auto;
     flex-shrink: 0;
   }
-  .modal.center-modal-box {
-    width: 96vw;
-    max-height: 92vh;
-    border-radius: 10px;
-  }
-  .center-modal-body {
+  .center-panel-body {
     padding: 0.7rem 0.9rem;
   }
   .summary-cards.top-cards {
@@ -2219,5 +2248,9 @@ body {
   .summary-cards.top-cards .summary-card {
     flex: 1 1 45%;
     min-width: 45%;
+  }
+  .map-wrapper.v2 {
+    height: 45vh;
+    max-height: 45vh;
   }
 }

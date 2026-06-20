@@ -17,6 +17,7 @@ import RecordsModal from './components/RecordsModal';
 import QuestsPanel from './components/QuestsPanel';
 
 const SIDEBAR_TABS = [
+  { id: 'home', icon: '🗺️', label: '主页', fullLabel: '地图主页', desc: '查看地图与商队概览' },
   { id: 'travel', icon: '🚗', label: '旅行', fullLabel: '出发旅行', desc: '选择目的地并出发' },
   { id: 'trade', icon: '🏪', label: '市场', fullLabel: '市场交易', desc: '买卖常规货物' },
   { id: 'blackmarket', icon: '🌑', label: '黑市', fullLabel: '黑市交易', desc: '稀有和非法交易', requires: 'hasBlackMarket' },
@@ -27,7 +28,8 @@ const SIDEBAR_TABS = [
   { id: 'stats', icon: '📊', label: '统计', fullLabel: '资金统计', desc: '资金变化图表' },
 ];
 
-const MODAL_TAB_LABELS = {
+const TAB_LABELS = {
+  home: { icon: '🗺️', title: '地图主页' },
   travel: { icon: '🚗', title: '出发旅行' },
   trade: { icon: '🏪', title: '市场交易' },
   blackmarket: { icon: '🌑', title: '黑市交易' },
@@ -71,7 +73,7 @@ function GameApp() {
   const [acceptedQuests, setAcceptedQuests] = useState([]);
   const [questMessage, setQuestMessage] = useState(null);
 
-  const [activeModalTab, setActiveModalTab] = useState(null);
+  const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
     api.getCities().then(data => {
@@ -156,7 +158,7 @@ function GameApp() {
     setAcceptedQuests(gameData.acceptedQuests || []);
     setGameStarted(true);
     setShowNewGame(false);
-    setActiveModalTab(null);
+    setActiveTab('home');
     showMessage(`商队「${gameData.caravan.name}」已创建！祝你好运，${gameData.caravan.leader}！`);
   }, [showMessage]);
 
@@ -583,7 +585,7 @@ function GameApp() {
 
   const handleCityClick = useCallback((city) => {
     setSelectedDestination(city.id);
-    setActiveModalTab('travel');
+    setActiveTab('travel');
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -607,24 +609,19 @@ function GameApp() {
     setActiveEvent(null);
     setActiveEventResult(null);
     setView('game');
-    setActiveModalTab(null);
+    setActiveTab('home');
   }, [logout, gameStarted, sessionId]);
 
   const handleSidebarTabClick = useCallback((tabId) => {
-    if (activeModalTab === tabId) {
-      setActiveModalTab(null);
-      return;
-    }
-    setActiveModalTab(tabId);
+    setActiveTab(tabId);
     if (tabId === 'blackmarket') {
       loadBlackMarketPrices();
     } else if (tabId === 'mercenary') {
       loadAvailableMercenaries();
     }
-  }, [activeModalTab, loadBlackMarketPrices, loadAvailableMercenaries]);
+  }, [loadBlackMarketPrices, loadAvailableMercenaries]);
 
-  const closeModalTab = useCallback(() => {
-    setActiveModalTab(null);
+  const resetTabMessages = useCallback(() => {
     setTradeMessage(null);
     setBlackMarketMessage(null);
     setMercenaryMessage(null);
@@ -678,8 +675,8 @@ function GameApp() {
   const staminaPercent = caravan ? (caravan.stamina / caravan.maxStamina) * 100 : 0;
   const weightPercent = caravan && caravan.maxCarryWeight ? (weight / caravan.maxCarryWeight) * 100 : 0;
 
-  const renderModalContent = () => {
-    switch (activeModalTab) {
+  const renderTabContent = () => {
+    switch (activeTab) {
       case 'travel':
         return (
           <DestinationsPanel
@@ -774,7 +771,7 @@ function GameApp() {
     }
   };
 
-  const modalLabel = activeModalTab ? MODAL_TAB_LABELS[activeModalTab] : null;
+  const tabLabel = TAB_LABELS[activeTab];
 
   return (
     <div className="app app-new-layout">
@@ -821,7 +818,7 @@ function GameApp() {
             if (tab.requires === 'hasBlackMarket' && !currentCity?.hasBlackMarket) {
               return null;
             }
-            const isActive = activeModalTab === tab.id;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
@@ -843,67 +840,73 @@ function GameApp() {
         </aside>
 
         <main className="main-content-area v2">
-          <div className="summary-cards top-cards">
-            <div className="summary-card sc-city">
-              <div className="sc-label">📍 当前</div>
-              <div className="sc-value">{currentCity?.name || '—'}</div>
-              <div className="sc-sub">{currentCity?.description || ''}</div>
-            </div>
-            {selectedDestination && (
-              <div className="summary-card sc-dest highlight">
-                <div className="sc-label">🎯 目的地</div>
-                <div className="sc-value">
-                  → {connectedCities.find(c => c.id === selectedDestination)?.name || '—'}
+          {activeTab === 'home' ? (
+            <>
+              <div className="summary-cards top-cards">
+                <div className="summary-card sc-city">
+                  <div className="sc-label">📍 当前</div>
+                  <div className="sc-value">{currentCity?.name || '—'}</div>
+                  <div className="sc-sub">{currentCity?.description || ''}</div>
                 </div>
-                <div className="sc-sub">
-                  {(() => {
-                    const dest = connectedCities.find(c => c.id === selectedDestination);
-                    if (!dest?.travel) return '';
-                    const t = dest.travel;
-                    return `${t.distance}km · 体力-${t.staminaCost} · 💧${t.waterCost} 🍞${t.foodCost} ⛽${t.fuelCost}`;
-                  })()}
-                </div>
+                {selectedDestination && (
+                  <div className="summary-card sc-dest highlight">
+                    <div className="sc-label">🎯 目的地</div>
+                    <div className="sc-value">
+                      → {connectedCities.find(c => c.id === selectedDestination)?.name || '—'}
+                    </div>
+                    <div className="sc-sub">
+                      {(() => {
+                        const dest = connectedCities.find(c => c.id === selectedDestination);
+                        if (!dest?.travel) return '';
+                        const t = dest.travel;
+                        return `${t.distance}km · 体力-${t.staminaCost} · 💧${t.waterCost} 🍞${t.foodCost} ⛽${t.fuelCost}`;
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {acceptedQuests?.slice(0, 2).map(q => (
+                  <div key={q.id} className="summary-card sc-quest">
+                    <div className="sc-label">📜 {q.title?.slice(0, 10) || '任务'}</div>
+                    <div className="sc-value small">
+                      {q.currentStage === 'delivered' || q.currentStage === 'returning' ? '✅ 可交付' : `进行中·${q.currentStage}`}
+                    </div>
+                    <div className="sc-sub">💰{q.reward?.money || 0} ⭐{q.reward?.reputation || 0}</div>
+                  </div>
+                ))}
               </div>
-            )}
-            {acceptedQuests?.slice(0, 2).map(q => (
-              <div key={q.id} className="summary-card sc-quest">
-                <div className="sc-label">📜 {q.title?.slice(0, 10) || '任务'}</div>
-                <div className="sc-value small">
-                  {q.currentStage === 'delivered' || q.currentStage === 'returning' ? '✅ 可交付' : `进行中·${q.currentStage}`}
-                </div>
-                <div className="sc-sub">💰{q.reward?.money || 0} ⭐{q.reward?.reputation || 0}</div>
-              </div>
-            ))}
-          </div>
 
-          <div className="map-wrapper v2">
-            <GameMap
-              cities={allCities}
-              connections={allConnections}
-              currentCityId={caravan?.currentCityId}
-              connectedCities={connectedCities}
-              onCityClick={handleCityClick}
-              selectedDestination={selectedDestination}
-            />
-          </div>
+              <div className="map-wrapper v2">
+                <GameMap
+                  cities={allCities}
+                  connections={allConnections}
+                  currentCityId={caravan?.currentCityId}
+                  connectedCities={connectedCities}
+                  onCityClick={handleCityClick}
+                  selectedDestination={selectedDestination}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="center-panel">
+              <div className="center-panel-header">
+                <h3>
+                  {tabLabel?.icon} {tabLabel?.title}
+                </h3>
+                <button
+                  className="center-panel-back"
+                  onClick={() => { setActiveTab('home'); resetTabMessages(); }}
+                  title="返回地图主页"
+                >
+                  ← 主页
+                </button>
+              </div>
+              <div className="center-panel-body">
+                {renderTabContent()}
+              </div>
+            </div>
+          )}
         </main>
       </div>
-
-      {activeModalTab && (
-        <div className="modal-overlay center-modal" onClick={closeModalTab}>
-          <div className="modal center-modal-box" onClick={e => e.stopPropagation()}>
-            <div className="modal-header center-modal-header">
-              <h3>
-                {modalLabel?.icon} {modalLabel?.title}
-              </h3>
-              <button className="modal-close" onClick={closeModalTab} title="关闭">×</button>
-            </div>
-            <div className="center-modal-body">
-              {renderModalContent()}
-            </div>
-          </div>
-        </div>
-      )}
 
       <EventModal
         event={activeEvent}
